@@ -183,57 +183,63 @@ writes get through.
 
 ## Verified on hardware
 
-Everything below was checked on one Diematic iSystem reporting type `D4`,
-and every write was restored to its original value afterwards.
+Everything below was checked on one real boiler, a Diematic iSystem
+reporting type `D4`, and every write was restored to its original value
+afterwards. Treat anything not in this table as unverified.
 
-- Reads agree between the two layouts for outdoor, boiler, return, hot water
-  and room temperature, fault, type code and clock.
-- Setpoint writes work: circuit day, night and frost targets, slope, hot
-  water day target, summer to winter threshold. The boiler accepts function
-  code 16 only. Function code 6 times out.
-- Circuit B mode writes work through register 26.
-- Circuit A and hot water mode writes are rejected. Both use register 17
-  and the test boiler has no circuit A. The write reverts on the next read
-  with and without the Diematic 4 panel refresh. Whether it works on a
-  boiler that has circuit A is untested.
-- Schedules match the console. Editing P4 of circuit B on the console
-  changed the corresponding registers within seconds and left circuits A
-  and C alone. The hot water program matched too. The auxiliary program has
-  no console page to compare against.
-- Program selection matches the console. Switching circuit A through P1,
-  P4, P2 and P3 gave 0x2000, 0x2015, 0x2007 and 0x200E in register 231, so
-  the low byte is 7 times (4 times circuit index plus program index).
-  Writing registers 231 to 233 is rejected in every encoding tried, so
-  selection stays read-only.
-- Schedule reads must be one day, three registers, per request. A longer
-  read returns the boiler's internal week, five words per day, starting at
-  the day where the read began and wrapping inside that program. The
-  library declares each day as its own read window.
+| Feature | Status |
+| --- | --- |
+| Reading sensors, hot water, and circuit values | Works, on both layouts |
+| Setpoint writes (day, night, frost targets, slope, summer to winter threshold) | Works |
+| Circuit B mode write | Works |
+| Circuit A mode write, hot water mode write | Rejected on this boiler, which has no circuit A. Untested on one that has circuit A |
+| Weekly schedules and the active program (reading) | Works, matches the console |
+| Program selection (choosing a different program) | Not possible, the boiler rejects every write tried |
+| Setting the clock | Implemented, but never run against a real boiler |
+| Writing the weekly schedule | Not implemented |
+| Solar and exchanger readings, iSystem layout | Left out, this boiler's solar module has a fault and the raw readings looked unreliable |
+| Fault codes | The table matches "no fault", individual fault codes are unconfirmed until a real one occurs |
+
+<details>
+<summary>Technical detail behind the table above</summary>
+
+- The boiler only accepts function code 16 for writes, function code 6
+  times out.
+- Circuit B mode writes go through register 26. Circuit A and hot water
+  mode share register 17, and on this boiler, which has no circuit A, a
+  write there reverts on the next read regardless of the Diematic 4 panel
+  refresh.
+- Editing program P4 of circuit B on the console changed the matching
+  registers within seconds and left circuits A and C alone. The hot water
+  program matched too. The auxiliary program has no console page to
+  compare against.
+- Switching circuit A through P1, P4, P2 and P3 on the console produced
+  0x2000, 0x2015, 0x2007 and 0x200E in register 231, consistent with the
+  low byte being 7 times (4 times circuit index plus program index).
+  Writing registers 231 to 233 was rejected in every encoding tried.
+- A schedule read must stay to one day, three registers, per request. A
+  longer read returns the boiler's internal week, five words per day,
+  starting at the day the read began and wrapping inside that program.
 - Register 13, the Diematic 4 panel refresh target, returns the first word
-  of the previous response when read. The library never reads it back.
-- The `Diematic.set_clock` method has only run against a mock unit.
-  `DiematicISystem` has no clock write and there is no schedule write.
-- Solar and exchanger registers on the iSystem page returned changing,
-  non-sentinel values on a boiler whose solar module reports a fault, so
-  they are left out of `DiematicISystem` until a solar-equipped boiler can
-  confirm them.
-- The fault code table comes from isystem-to-mqtt and matches this boiler's
-  0xFFFF no-fault encoding. Individual codes are unconfirmed until a real
-  fault occurs.
+  of the previous response when read, so the library never reads it back.
+
+</details>
 
 ## Credits
 
-Register maps and decoding rules come from
-[Diematic_to_MQTT](https://github.com/Benoit3/Diematic_to_MQTT) (Benoit3),
-[isystem-to-mqtt](https://github.com/ngraziano/isystem-to-mqtt) (ngraziano,
-fault table, DPSM confirmation, and the naming of the schedule blocks as
-program P4),
-[diematic_server](https://github.com/IgnacioHR/diematic_server) (Ignacio
-Hernandez-Ros, iSystem register map and type code table, built on
-[gmasse/diematic](https://github.com/gmasse/diematic)), and the De Dietrich
-register spreadsheet distributed with
-[diematic-to-mqtt](https://github.com/ababilone/diematic-to-mqtt)
-(ababilone). All MIT licensed.
-[python-diematic](https://github.com/gsternagl/python-diematic) (gsternagl)
-served as a further cross-check. Built on
-[modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
+- Register maps and decoding rules:
+  [Diematic_to_MQTT](https://github.com/Benoit3/Diematic_to_MQTT) (Benoit3)
+- Fault table, DPSM confirmation, and the naming of the schedule blocks as
+  program P4:
+  [isystem-to-mqtt](https://github.com/ngraziano/isystem-to-mqtt) (ngraziano)
+- iSystem register map and type code table:
+  [diematic_server](https://github.com/IgnacioHR/diematic_server) (Ignacio
+  Hernandez-Ros), built on [gmasse/diematic](https://github.com/gmasse/diematic)
+- Register spreadsheet:
+  [diematic-to-mqtt](https://github.com/ababilone/diematic-to-mqtt) (ababilone)
+- Further cross-check:
+  [python-diematic](https://github.com/gsternagl/python-diematic) (gsternagl)
+- Built on
+  [modbus-connection](https://github.com/home-assistant-libs/modbus-connection)
+
+All of the above, except modbus-connection, are MIT licensed.
