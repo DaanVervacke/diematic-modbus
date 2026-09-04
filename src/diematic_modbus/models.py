@@ -1,0 +1,42 @@
+"""De Dietrich model and controller codes for the type register (457).
+
+Transcribed from IgnacioHR/diematic_server (MIT). The low codes are boiler
+chassis, and codes 20 to 25 are controller generations
+(a Diematic 4 panel reports 24, "D4"). The register names the controller or
+chassis the panel reports, not always the physical boiler model.
+"""
+
+from __future__ import annotations
+
+MODEL_CODES: dict[int, str] = {
+    0: "3-25LP",
+    1: "3-15LP",
+    2: "3-25SOLO",
+    3: "3-25K",
+    4: "3-15SOLO",
+    5: "3-E25LP",
+    6: "DOMOLIGHT",
+    7: "3-35",
+    8: "3-50",
+    9: "3-25 BIC",
+    10: "3-15ECO",
+    11: "3-25ECO",
+    12: "3-35ECO",
+    13: "3-50ECO",
+    14: "3-65ECO",
+    20: "Diematic 3",
+    21: "Diematic m2",
+    22: "Diematic m3",
+    23: "MIT",
+    24: "D4",
+    25: "MB/OT interface",
+    30: "MC 35 E",
+    31: "MC 45",
+    32: "MC 65",
+    33: "MC 90",
+    34: "C210",
+    35: "C310",
+    36: "C610",
+    37: "C230",
+    40: "Robur HP",
+}
