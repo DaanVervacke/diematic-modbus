@@ -8,12 +8,13 @@ and keep ownership of the socket. It has no Home Assistant imports.
 
 > [!WARNING]
 > Alpha. The register map comes from other people's reverse engineering,
-> cross-checked against the De Dietrich register sheet, and was tested on one
-> boiler: a Diematic iSystem that reports type code `D4`. On that boiler reads,
-> setpoint writes and circuit B mode writes work. Circuit A and hot water mode
-> writes are rejected there because it has no circuit A, so they are unproven
-> on a boiler that has one. The clock write has never run against real
-> hardware. See "Verified on hardware". Use at your own risk.
+> cross-checked against the De Dietrich register sheet, and was tested on
+> the maintainer's own boiler, a Diematic iSystem that reports type code
+> `D4`. On that boiler reads, setpoint writes and circuit B mode writes
+> work. Circuit A and hot water mode writes are rejected because that
+> boiler has no circuit A, so they are unproven on a boiler that has one.
+> The clock write has never run against real hardware. See "Verified on
+> hardware". Use at your own risk.
 
 Two console layouts, two classes:
 
@@ -183,21 +184,21 @@ writes get through.
 
 ## Verified on hardware
 
-Everything below was checked on one real boiler, a Diematic iSystem
-reporting type `D4`, and every write was restored to its original value
-afterwards. Treat anything not in this table as unverified.
+Everything below was checked against the maintainer's own boiler, a
+Diematic iSystem reporting type `D4`, and every write was restored to its
+original value afterwards. Treat anything not in this table as unverified.
 
 | Feature | Status |
 | --- | --- |
 | Reading sensors, hot water, and circuit values | Works, on both layouts |
 | Setpoint writes (day, night, frost targets, slope, summer to winter threshold) | Works |
 | Circuit B mode write | Works |
-| Circuit A mode write, hot water mode write | Rejected on this boiler, which has no circuit A. Untested on one that has circuit A |
+| Circuit A mode write, hot water mode write | Rejected on the maintainer's boiler, which has no circuit A. Untested on a boiler that has circuit A |
 | Weekly schedules and the active program (reading) | Works, matches the console |
-| Program selection (choosing a different program) | Not possible, the boiler rejects every write tried |
+| Program selection (choosing a different program) | Not possible, the maintainer's boiler rejects every write tried |
 | Setting the clock | Implemented, but never run against a real boiler |
 | Writing the weekly schedule | Not implemented |
-| Solar and exchanger readings, iSystem layout | Left out, this boiler's solar module has a fault and the raw readings looked unreliable |
+| Solar and exchanger readings, iSystem layout | Left out, the maintainer's boiler has a solar module reporting a fault and the raw readings looked unreliable |
 | Fault codes | The table matches "no fault", individual fault codes are unconfirmed until a real one occurs |
 
 <details>
@@ -206,9 +207,9 @@ afterwards. Treat anything not in this table as unverified.
 - The boiler only accepts function code 16 for writes, function code 6
   times out.
 - Circuit B mode writes go through register 26. Circuit A and hot water
-  mode share register 17, and on this boiler, which has no circuit A, a
-  write there reverts on the next read regardless of the Diematic 4 panel
-  refresh.
+  mode share register 17, and on the maintainer's boiler, which has no
+  circuit A, a write there reverts on the next read regardless of the
+  Diematic 4 panel refresh.
 - Editing program P4 of circuit B on the console changed the matching
   registers within seconds and left circuits A and C alone. The hot water
   program matched too. The auxiliary program has no console page to
