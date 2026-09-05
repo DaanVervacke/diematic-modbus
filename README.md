@@ -522,12 +522,13 @@ as numbers rather than inventing an explanation.
 | Calculated target (°C), reported modulated power (%) and output-state code | `calc_setpoint`, `modulated_power`, `output_state` |
 
 The following **`diagnostics` fields refresh on each update**. Except for
-`aux_active_mode`, they are raw numbers, not decoded explanations or Boolean
-fault flags.
+`aux_active_mode` and `dhw_priority`, they are raw numbers, not decoded
+explanations or Boolean fault flags.
 
 | Information | Fields within `diagnostics` |
 | --- | --- |
-| Boiler operating-mode code and hot-water priority code | `boiler_active_mode`, `dhw_priority` |
+| Boiler operating-mode code | `boiler_active_mode` |
+| Hot-water loading priority, decoded as `HotWaterPriority` (total, relative or non-priority) | `dhw_priority` |
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
 | Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `zone_aux_type` |

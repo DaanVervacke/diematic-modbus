@@ -2,7 +2,13 @@
 
 from ._base import UpdateReport
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
-from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
+from .enums import (
+    ActiveMode,
+    DiematicVariant,
+    HeatingMode,
+    HotWaterMode,
+    HotWaterPriority,
+)
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
 from .models import MODEL_CODES
@@ -20,6 +26,7 @@ __all__ = [
     "HeatingMode",
     "HotWater",
     "HotWaterMode",
+    "HotWaterPriority",
     "Identity",
     "Schedules",
     "Sensors",

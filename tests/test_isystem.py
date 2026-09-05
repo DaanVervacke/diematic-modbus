@@ -8,6 +8,7 @@ from diematic_modbus import (
     DiematicVariant,
     HeatingMode,
     HotWaterMode,
+    HotWaterPriority,
 )
 
 
@@ -147,6 +148,17 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     assert boiler.diagnostics.boiler_active_mode == 5
     assert boiler.diagnostics.pcu_block == 255
     assert boiler.diagnostics.zone_aux_type == 3
+
+
+async def test_isystem_dhw_priority_decodes(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({674: 1})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.diagnostics.dhw_priority is HotWaterPriority.RELATIVE
+    mock_modbus_unit.holding.update({674: 9})
+    await boiler.async_update()
+    assert boiler.diagnostics.dhw_priority == 9
 
 
 async def test_isystem_active_mode_decodes(mock_modbus_unit):
