@@ -21,7 +21,7 @@ _MAGNITUDE = 0x7FFF
 _NO_SENSOR = frozenset((0xFFFF, 0x8CCC))
 
 
-class Float10Field(RegisterField[float]):
+class Float10Field(RegisterField[float | None]):
     """A value in tenths with a separate sign bit for negative numbers."""
 
     none_values: tuple[int, ...] = ()
@@ -92,7 +92,7 @@ class _FaultCode:
 
 def fault_code(
     address: int, table: dict[int, str], *, ok: tuple[int, ...] = (0xFFFF,)
-) -> NumberField[str | int]:
+) -> NumberField[str | int | None]:
     """Map a fault register to a label, no-fault codes to None, unknown to raw int."""
     return NumberField(address, signed=False, convert=_FaultCode(table, frozenset(ok)))
 
@@ -168,7 +168,7 @@ class _TimeProgram:
         return (raw & 0xFF) // _DAYS % _PROGRAMS + 1
 
 
-def time_program(address: int) -> NumberField[int]:
+def time_program(address: int) -> NumberField[int | None]:
     """Read the selected heating program as a number from 1 to 4."""
     return NumberField(address, signed=False, convert=_TimeProgram())
 

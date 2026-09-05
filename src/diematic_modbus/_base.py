@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from enum import IntEnum
 
 from modbus_connection import ModbusConnectionError, ModbusError, ModbusUnit
 from modbus_connection.model import Component, ComponentGroup
@@ -113,26 +114,26 @@ class _Regulator:
         return await group.async_read_raw(notify=False)
 
     async def set_circuit_a_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit A mode regardless of its presence flag."""
-        await self._write_mode(self._mode_a_addr, _HEATING_MASK, int(mode))
+        """Set heating circuit A mode, rejecting HOLIDAY as panel-only."""
+        await self._write_mode(self._mode_a_addr, _HEATING_MASK, HeatingMode, mode)
 
     async def set_circuit_b_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit B mode regardless of its presence flag."""
-        await self._write_mode(self._mode_b_addr, _HEATING_MASK, int(mode))
+        """Set heating circuit B mode, rejecting HOLIDAY as panel-only."""
+        await self._write_mode(self._mode_b_addr, _HEATING_MASK, HeatingMode, mode)
 
     async def set_hot_water_mode(self, mode: HotWaterMode) -> None:
         """Set hot-water mode while preserving the shared heating-mode bits."""
-        await self._write_mode(self._hot_water_addr, _HOT_WATER_MASK, int(mode))
+        await self._write_mode(
+            self._hot_water_addr, _HOT_WATER_MASK, HotWaterMode, mode
+        )
 
-    async def _write_mode(self, address: int, mask: int, code: int) -> None:
-        if mask == _HEATING_MASK:
-            mode = HeatingMode(code)
-            if mode is HeatingMode.HOLIDAY:
-                raise ValueError(
-                    "Holiday mode is read-only. Set it on the control panel."
-                )
-        else:
-            HotWaterMode(code)
+    async def _write_mode(
+        self, address: int, mask: int, enum: type[IntEnum], mode: int
+    ) -> None:
+        validated = enum(mode)
+        if validated is HeatingMode.HOLIDAY:
+            raise ValueError("Holiday mode is read-only. Set it on the control panel.")
+        code = int(validated)
         (current,) = await self._unit.read_holding_registers(address, 1)
         await self._unit.write_registers(address, [(current & ~mask) | code])
         if self._nudges_panel and self.variant is DiematicVariant.DIEMATIC_4:

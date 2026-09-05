@@ -73,6 +73,18 @@ async def test_isystem_set_day_writes_three_words(mock_modbus_unit):
     assert [mock_modbus_unit.holding[a] for a in range(147, 150)] == [0x0, 0xC000, 0x0]
 
 
+async def test_isystem_schedules_set_day_facade_writes(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.schedules.set_day("circuit_b_p4", 1, [(time(8, 0), time(9, 0))])
+    assert [mock_modbus_unit.holding[a] for a in range(147, 150)] == [0x0, 0xC000, 0x0]
+
+
+async def test_isystem_schedules_set_day_rejects_unknown_schedule(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    with pytest.raises(ValueError, match="unknown schedule"):
+        await boiler.schedules.set_day("nope", 1, [])
+
+
 async def test_isystem_set_day_rejects_bad_weekday(mock_modbus_unit):
     boiler = DiematicISystem(mock_modbus_unit)
     with pytest.raises(ValueError, match="weekday"):

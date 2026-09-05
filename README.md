@@ -363,8 +363,9 @@ To change a schedule, write one weekday at a time through the program bundle:
 ```python
 from datetime import time
 
-program = boiler.schedules.programs["circuit_b_p4"]
-await program.set_day(1, [(time(6, 0), time(8, 0)), (time(16, 0), time(22, 0))])
+await boiler.schedules.set_day(
+    "circuit_b_p4", 1, [(time(6, 0), time(8, 0)), (time(16, 0), time(22, 0))]
+)
 ```
 
 `set_day` takes the weekday, 1 for Monday through 7 for Sunday, and the same
@@ -492,7 +493,7 @@ enum value has been checked on hardware.
 | Auxiliary comfort periods, Monday to Sunday | iSystem | `schedules.auxiliary` |
 
 All five are cached after a successful read. Each is writable one day at a
-time through `schedules.programs["<name>"].set_day(weekday, periods)`, verified
+time through `schedules.set_day("<name>", weekday, periods)`, verified
 on the test boiler (circuit B, plain per-day three-register writes). Heating
 programs P1, P2 and P3 cannot be read or written as weekly schedules through
 this library. Selecting which program is active is not implemented.

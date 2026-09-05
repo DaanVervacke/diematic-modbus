@@ -7,7 +7,7 @@ from datetime import datetime
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, bit, integer
 
-from ._base import _Regulator
+from ._base import _HEATING_MASK, _HOT_WATER_MASK, _Regulator
 from .enums import (
     ActiveMode,
     DiematicVariant,
@@ -70,8 +70,6 @@ _DAY_WINDOWS = tuple(
     (day * _DAY_STRIDE, day * _DAY_STRIDE + _DAY_STRIDE - 1) for day in range(_DAYS)
 )
 
-_HEATING_MASK = 0x2F
-_HOT_WATER_MASK = 0x50
 _READ_ONCE = frozenset(f"schedules.{name}" for name in SCHEDULE_BASES) | {"config"}
 
 _ZONE_DAY = snap_clamp(0.5, 10.0, 30.0)
@@ -214,6 +212,12 @@ class Schedules:
             name: WeekProgram(unit, base_offset=base)
             for name, base in SCHEDULE_BASES.items()
         }
+
+    async def set_day(self, schedule: str, weekday: int, periods: DaySchedule) -> None:
+        """Write one weekday of a named schedule, keyed as the read properties are."""
+        if schedule not in self.programs:
+            raise ValueError(f"unknown schedule {schedule!r}")
+        await self.programs[schedule].set_day(weekday, periods)
 
     @property
     def circuit_a_p4(self) -> WeekSchedule:
@@ -384,8 +388,8 @@ class DiematicISystem(_Regulator):
         return self._force_circuit_c or self.circuit_c.room_temp is not None
 
     async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit C mode regardless of its presence flag."""
-        await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, int(mode))
+        """Set heating circuit C mode; HOLIDAY is rejected as panel-only."""
+        await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, HeatingMode, mode)
 
     async def set_clock(self, moment: datetime) -> None:
         """Set the regulator clock from ``moment``."""
