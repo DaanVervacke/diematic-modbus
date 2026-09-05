@@ -1,6 +1,7 @@
 # diematic-modbus
 
 [![CI](https://github.com/DaanVervacke/diematic-modbus/actions/workflows/ci.yml/badge.svg)](https://github.com/DaanVervacke/diematic-modbus/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/diematic-modbus)](https://pypi.org/project/diematic-modbus/)
 
 Read temperatures, check what your heating is doing, and change supported
 settings on a De Dietrich Diematic boiler from Python.
@@ -219,16 +220,17 @@ choose to run it.
 
 ## Use the Python library
 
-The package requires Python 3.12+. From a local checkout, install it in your
+The package requires Python 3.12+. Install it from PyPI into your
 application's virtual environment:
 
 ```shell
-pip install -e ".[cli]"
+pip install "diematic-modbus[cli]"
 ```
 
 The `cli` extra includes the `tmodbus` backend used below. If your application
-already provides a Modbus connection, `pip install -e .` installs the library
-without choosing a backend.
+already provides a Modbus connection, `pip install diematic-modbus` installs
+the library without choosing a backend. To work from a local checkout instead,
+use `pip install -e ".[cli]"`.
 
 The library is built on
 [modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
