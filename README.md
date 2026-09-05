@@ -18,7 +18,7 @@ you can help check compatibility with your boiler without writing Python.
 
 | Feature | Read | Change |
 | --- | --- | --- |
-| Boiler operation | Temperatures, water pressure, fan speed, burner and pump status, faults | No direct burner or pump control |
+| Boiler operation | Temperatures, water pressure, fan speed, burner and pump status, experimental fault codes | No direct burner or pump control |
 | Room heating | Room temperatures, temperature targets, heating modes and heating-curve settings | Day, night and frost-protection targets, heating mode, selected heating curves |
 | Hot water | Tank temperature, day/night targets and operating mode | Day/night targets and automatic or comfort mode |
 | Weekly schedules | On iSystem: heating program P4, hot-water and auxiliary schedules, and which heating program is selected | No schedule editing or program selection |
@@ -378,6 +378,12 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Solar and solar-tank temperatures | Base | `sensors.solar_temp`, `solar_tank_temp` |
 | Fault label or unknown fault number | Both | `sensors.alarm` |
 
+Fault readings are not reliable on the test iSystem installation: register
+465 can return data left over from a previous reply, producing either a
+false fault or an apparent no-fault value. Do not use `sensors.alarm` alone
+for fault notifications or assume that `None` confirms a healthy boiler.
+Check the control panel instead.
+
 Temperatures are in °C. The averaging period for power is not defined by the
 library. Pump and burner status are controller-reported states, not
 independent proof of water flow or combustion. There is no energy-total,
@@ -520,11 +526,14 @@ claim for every boiler with a similar panel.
 | Selected heating program | Circuit A's reported P1/P4/P2/P3 selections matched the panel |
 | Auxiliary schedule | Readable, but no panel page was available to compare it with |
 | Program-selection writes | Attempts on the test boiler were rejected. The library keeps this read-only |
-| Fault descriptions | The no-fault value was observed. Individual descriptions have not been confirmed against actual faults |
+| Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
 | Clock writes | Not tested on hardware |
 
 ### Known limits
 
+- Fault register 465 can contain leftover response data on the test iSystem.
+  The library still exposes its decoded value, but cannot tell whether it is
+  a real fault. This has not been checked on other controller types.
 - Holiday mode can be read, but cannot be requested through the library.
   Holiday dates and durations remain panel-only. The decoded value `33`
   comes from an observation on the test iSystem installation, not a new
@@ -549,6 +558,16 @@ hot water controlled through 659. Register 640 reports the current hot-water
 state, not its requested mode. Only base-layout Diematic 4 requests a panel
 refresh. Never read refresh register 13 back: on the test boiler it returned
 the first word of the previous response.
+
+Read-only checks on 2026-09-05 found similar behavior at alarm register 465:
+reading 70-110 followed by 427-465 returned `5` as the alarm, matching register
+108 (day of month) at offset 38 in the preceding response. Reading 650-673
+followed by 451-472 returned `200`, matching register 664 at offset 14.
+Both sequences repeated twice. A single-register read of 465 likewise
+returned `220` after register 8 and `24` after register 457. These were
+comparisons between raw replies, not confirmations of panel faults.
+Do not treat a different request range as a fix or filter those particular
+numbers out: they may be legitimate fault codes on other controllers.
 
 Keep schedule reads to one day, three registers per request. Longer reads
 returned a different internal format on the test boiler. Program selection

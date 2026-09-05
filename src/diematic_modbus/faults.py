@@ -1,4 +1,4 @@
-"""Modulens/DPSM alarm labels, unverified against actual faults."""
+"""Unverified alarm labels for register 465, which can return stale response data."""
 
 from __future__ import annotations
 
@@ -142,5 +142,5 @@ MODULENS_FAULTS: dict[int, str] = {
     0x201C: "L254:DEF.INCONNU",
 }
 
-# No-fault marker observed on the test boiler, not a validation of fault labels.
+# Register 465 can return leftover response data, including this no-fault code.
 NO_FAULT = 0xFFFF
