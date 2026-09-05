@@ -31,6 +31,14 @@ class HotWaterMode(IntEnum):
     PERM = 16
 
 
+class ActiveMode(IntEnum):
+    """The mode a zone is currently running, from the iSystem active-mode registers."""
+
+    ANTIFREEZE = 0
+    NIGHT = 2
+    DAY = 4
+
+
 class Alarm(IntEnum):
     """Condensing (DPSM) fault codes at register 465, unverified against hardware.
 

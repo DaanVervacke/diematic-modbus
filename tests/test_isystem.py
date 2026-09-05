@@ -2,7 +2,7 @@ from datetime import time
 
 from modbus_connection.mock import MockModbusUnit
 
-from diematic_modbus import DiematicISystem, HeatingMode, HotWaterMode
+from diematic_modbus import ActiveMode, DiematicISystem, HeatingMode, HotWaterMode
 
 
 def _seed(unit: MockModbusUnit) -> None:
@@ -128,6 +128,18 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     assert boiler.diagnostics.boiler_active_mode == 5
     assert boiler.diagnostics.pcu_block == 255
     assert boiler.diagnostics.zone_aux_type == 3
+
+
+async def test_isystem_active_mode_decodes(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({637: 0, 638: 4, 639: 4, 640: 2, 641: 0})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.circuit_a.active_mode is ActiveMode.ANTIFREEZE
+    assert boiler.circuit_b.active_mode is ActiveMode.DAY
+    assert boiler.circuit_c.active_mode is ActiveMode.DAY
+    assert boiler.hot_water.active_mode is ActiveMode.NIGHT
+    assert boiler.diagnostics.aux_active_mode is ActiveMode.ANTIFREEZE
 
 
 async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):

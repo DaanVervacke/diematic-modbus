@@ -16,7 +16,7 @@ owns the connection and its lifecycle::
 
 from ._base import UpdateReport
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
-from .enums import DiematicVariant, HeatingMode, HotWaterMode
+from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
 from .models import MODEL_CODES
@@ -25,6 +25,7 @@ from .regulator import Diematic
 __all__ = [
     "MODEL_CODES",
     "MODULENS_FAULTS",
+    "ActiveMode",
     "CircuitA",
     "CircuitB",
     "Diematic",

@@ -23,7 +23,7 @@ from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, bit, integer
 
 from ._base import _MODE_A, _MODE_B, _Regulator
-from .enums import DiematicVariant, HeatingMode, HotWaterMode
+from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
 from .faults import MODULENS_FAULTS
 from .fields import (
     WeekSchedule,
@@ -46,7 +46,7 @@ ISYSTEM_WINDOWS = (
     (305, 360),
     (426, 474),
     (600, 625),
-    (644, 644),
+    (637, 644),
     (650, 685),
     (707, 744),
 )
@@ -105,6 +105,7 @@ class HotWater(ISystemComponent):
     temp = float10(603, unit="°C")
     bottom_temp = float10(623, unit="°C")
     mode = masked_enum(_MODE_A, _HOT_WATER_MASK, HotWaterMode)
+    active_mode = masked_enum(640, 0x06, ActiveMode)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
     night_target = float10(673, writable=_DHW, force_fc16=True, unit="°C")
 
@@ -115,6 +116,7 @@ class CircuitA(ISystemComponent):
     room_temp = float10(614, unit="°C")
     calc_temp = float10(615, unit="°C")
     mode = masked_enum(_MODE_A, _HEATING_MASK, HeatingMode)
+    active_mode = masked_enum(637, 0x06, ActiveMode)
     program = time_program(231)
     pump_on = bit(427, 4)
     ambient_influence = integer(654, signed=False)
@@ -131,6 +133,7 @@ class CircuitB(ISystemComponent):
     calc_temp = float10(617, unit="°C")
     supply_temp = float10(605, unit="°C")
     mode = masked_enum(_MODE_B, _HEATING_MASK, HeatingMode)
+    active_mode = masked_enum(638, 0x06, ActiveMode)
     program = time_program(232)
     pump_on = bit(428, 4)
     ambient_influence = integer(660, signed=False)
@@ -151,6 +154,7 @@ class CircuitC(ISystemComponent):
     room_temp = float10(618, unit="°C")
     calc_temp = float10(619, unit="°C")
     program = time_program(233)
+    active_mode = masked_enum(639, 0x06, ActiveMode)
     ambient_influence = integer(668, signed=False)
     slope = float10(669, unit="K/K")
     min_temp = float10(670, unit="°C")
@@ -287,6 +291,7 @@ class Diagnostics(ISystemComponent):
     """
 
     boiler_active_mode = integer(644, signed=False)
+    aux_active_mode = masked_enum(641, 0x06, ActiveMode)
     dhw_priority = integer(674, signed=False)
     pcu_state = integer(710, signed=False)
     pcu_substate = integer(711, signed=False)

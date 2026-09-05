@@ -35,8 +35,8 @@ class here.
 | Bundle | `Diematic` | `DiematicISystem` | Reads | Writes |
 | --- | --- | --- | --- | --- |
 | `sensors` | yes | yes | outdoor, boiler, return and calculated boiler temperature, smoke temperature, water pressure, ionization current, fan speed, burner and hot water pump state, fault code. `Diematic` adds pump power, instant and average power, solar temperatures | no |
-| `hot_water` | yes | yes | temperature, mode | day and night target |
-| `circuit_a` | yes | yes | room and calculated temperature, mode, pump state, ambient sensor influence, plus selected program on `DiematicISystem` | day, night and frost target, slope |
+| `hot_water` | yes | yes | temperature, mode, current active mode on `DiematicISystem` | day and night target |
+| `circuit_a` | yes | yes | room and calculated temperature, mode, pump state, ambient sensor influence, plus selected program and current active mode on `DiematicISystem` | day, night and frost target, slope |
 | `circuit_b` | yes | yes | same as circuit A, plus supply temperature, slope, and circuit min and max temperature | day, night and frost target, plus slope on `Diematic` |
 | `circuit_c` | no | yes | room and calculated temperature, selected program, ambient sensor influence, slope, and circuit min and max temperature. No mode register exists for circuit C | day, night and frost target |
 | `settings` | yes | yes | external frost threshold on `Diematic`, boiler min and max on `DiematicISystem` | summer to winter threshold, plus boiler min and max on `Diematic` |
