@@ -603,9 +603,13 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Additional iSystem readings, installer settings and diagnostics:
   [ngraziano/isystem-mqtt-go](https://github.com/ngraziano/isystem-mqtt-go)
   and [45clouds/diematic2mqtt](https://github.com/45clouds/diematic2mqtt).
-- Register spreadsheet and additional base-layout fields:
+- Additional base-layout fields and the De Dietrich register spreadsheet
+  ([modbus-registers-dedietrich.xlsx](https://github.com/ababilone/diematic-to-mqtt/blob/master/datasheets/modbus-registers-dedietrich.xlsx),
+  sheets P1 to P7 with tables T1 to T3, the source for the paged addressing and
+  the schedule and program-selection encodings):
   [ababilone/diematic-to-mqtt](https://github.com/ababilone/diematic-to-mqtt).
-- Further cross-checks:
+- Further cross-checks of the iSystem map:
+  [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
 - Connection handling, register modelling and test-script helpers:
   [modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
