@@ -51,6 +51,17 @@ _ISYSTEM_BUNDLES = (
     "diagnostics",
     "identity",
 )
+_BUNDLE_TITLES = {
+    "sensors": "Boiler readings",
+    "hot_water": "Hot water",
+    "circuit_a": "Heating circuit A",
+    "circuit_b": "Heating circuit B",
+    "circuit_c": "Heating circuit C",
+    "settings": "Temperature settings",
+    "config": "Installer values (cached after a successful read)",
+    "diagnostics": "Diagnostics (mostly numeric codes)",
+    "identity": "Reported type and clock",
+}
 
 
 def _format_range(start: time, end: time) -> str:
@@ -98,17 +109,7 @@ async def _dump(kind: str, regulator: Regulator) -> bool:
         for name, err in sorted(report.failed.items()):
             print(f"  {name}: {err}")
     for name in bundles:
-        title = {
-            "sensors": "Boiler readings",
-            "hot_water": "Hot water",
-            "circuit_a": "Heating circuit A",
-            "circuit_b": "Heating circuit B",
-            "circuit_c": "Heating circuit C",
-            "settings": "Temperature settings",
-            "config": "Installer values (cached after a successful read)",
-            "diagnostics": "Diagnostics (mostly numeric codes)",
-            "identity": "Reported type and clock",
-        }[name]
+        title = _BUNDLE_TITLES[name]
         print_component(getattr(regulator, name), title=f"{title} ({name})")
     print("\nRoom-temperature readings available (not a hardware inventory):")
     print(f"  circuit_a_present = {regulator.circuit_a_present}")

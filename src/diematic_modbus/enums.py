@@ -46,16 +46,3 @@ class ActiveMode(IntEnum):
     ANTIFREEZE = 0
     NIGHT = 2
     DAY = 4
-
-
-class Alarm(IntEnum):
-    """Unverified legacy fault codes, unused by sensor alarm decoding."""
-
-    OK = 0
-    RETURN_SENSOR_FAULT = 10
-    LOW_WATER_PRESSURE = 21
-    IGNITION_FAULT = 26
-    PARASITE_FLAME = 27
-    BOILER_STB = 28
-    UNIT_RESET = 30
-    SMOKE_SENSOR_FAULT = 31
