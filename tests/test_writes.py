@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 
 import pytest
 
@@ -9,6 +9,7 @@ from diematic_modbus import (
     HeatingMode,
     HotWaterMode,
 )
+from diematic_modbus.fields import ScheduleDayField, _day_intervals
 
 
 async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
@@ -52,6 +53,35 @@ async def test_set_clock_writes_blocks_with_marker(mock_modbus_unit):
     assert mock_modbus_unit.holding[108] == 0xFF00 | 4
     assert mock_modbus_unit.holding[109] == 0xFF00 | 9
     assert mock_modbus_unit.holding[110] == 0xFF00 | 26
+
+
+def test_schedule_day_encode_matches_verified_window():
+    words = ScheduleDayField(0).encode([(time(8, 0), time(9, 0))])
+    assert words == [0x0000, 0xC000, 0x0000]
+
+
+def test_schedule_day_encode_round_trips():
+    periods = [(time(6, 0), time(8, 0)), (time(16, 0), time(0, 0))]
+    assert _day_intervals(ScheduleDayField(0).encode(periods)) == periods
+
+
+async def test_isystem_set_day_writes_three_words(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.schedules.programs["circuit_b_p4"].set_day(
+        1, [(time(8, 0), time(9, 0))]
+    )
+    assert [mock_modbus_unit.holding[a] for a in range(147, 150)] == [0x0, 0xC000, 0x0]
+
+
+async def test_isystem_set_day_rejects_bad_weekday(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    with pytest.raises(ValueError, match="weekday"):
+        await boiler.schedules.programs["circuit_b_p4"].set_day(0, [])
+
+
+def test_schedule_day_encode_rejects_reversed_period():
+    with pytest.raises(ValueError, match="invalid comfort period"):
+        ScheduleDayField(0).encode([(time(9, 0), time(8, 0))])
 
 
 async def test_isystem_set_clock_writes_plain_block(mock_modbus_unit):

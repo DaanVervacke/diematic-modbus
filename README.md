@@ -21,7 +21,7 @@ you can help check compatibility with your boiler without writing Python.
 | Boiler operation | Temperatures, water pressure, fan speed, burner and pump status, experimental fault codes | No direct burner or pump control |
 | Room heating | Room temperatures, temperature targets, heating modes and heating-curve settings | Day, night and frost-protection targets, heating mode, selected heating curves |
 | Hot water | Tank temperature, day/night targets and operating mode | Day/night targets and automatic or comfort mode |
-| Weekly schedules | On iSystem: heating program P4, hot-water and auxiliary schedules, and which heating program is selected | No schedule editing or program selection |
+| Weekly schedules | On iSystem: heating program P4, hot-water and auxiliary schedules, and which heating program is selected | On iSystem: write P4, hot-water and auxiliary comfort periods one day at a time. No program selection |
 | Seasonal settings | Summer/winter changeover temperature and boiler temperature limits | Changeover temperature, and boiler limits through the base layout |
 | Installer information | On iSystem: calibration, tuning parameters and additional diagnostic codes | Read-only |
 | Identity and clock | Reported type code, controller/software code, date and time | iSystem clock setting verified on the test boiler. Base-layout clock setting is implemented but untested on a base-layout boiler |
@@ -354,6 +354,22 @@ The other properties are `circuit_a_p4`, `circuit_c_p4`, `hot_water`, and
 `boiler.circuit_b.program` separately reports the selected program, 1 to 4.
 Reading the P4 schedule does not mean P4 is selected.
 
+To change a schedule, write one weekday at a time through the program bundle:
+
+```python
+from datetime import time
+
+program = boiler.schedules.programs["circuit_b_p4"]
+await program.set_day(1, [(time(6, 0), time(8, 0)), (time(16, 0), time(22, 0))])
+```
+
+`set_day` takes the weekday, 1 for Monday through 7 for Sunday, and the same
+list of `datetime.time` pairs that a read returns. It writes that day's three
+registers. An interval ending at `time(0, 0)` runs to the end of the day, and
+an empty list clears the day. This edits the stored P4 program, which drives
+the boiler only while P4 is the selected program. Program selection is not
+writable, so set P4 at the panel if it is not already active.
+
 ## Full feature reference
 
 These tables describe the implementation, not a promise that each reading
@@ -466,9 +482,11 @@ enum value has been checked on hardware.
 | Hot-water comfort periods, Monday to Sunday | iSystem | `schedules.hot_water` |
 | Auxiliary comfort periods, Monday to Sunday | iSystem | `schedules.auxiliary` |
 
-All five are read-only and cached after a successful read. Heating programs
-P1, P2 and P3 cannot be read as weekly schedules through this library.
-Selecting a program or writing a schedule is not implemented.
+All five are cached after a successful read. Each is writable one day at a
+time through `schedules.programs["<name>"].set_day(weekday, periods)`, verified
+on the test boiler (circuit B, plain per-day three-register writes). Heating
+programs P1, P2 and P3 cannot be read or written as weekly schedules through
+this library. Selecting which program is active is not implemented.
 
 ### Installer settings and diagnostics
 
@@ -524,6 +542,7 @@ claim for every boiler with a similar panel.
 | Selected heating program | Circuit A's reported P1/P4/P2/P3 selections matched the panel |
 | Auxiliary schedule | Readable, but no panel page was available to compare it with |
 | Program-selection writes | Attempts on the test boiler were rejected. The library keeps this read-only |
+| Schedule writes | `set_day()` verified on 2026-09-05: wrote a single window, all-comfort and all-off to circuit B Monday, each read back exactly, then restored. Plain per-day three-register writes are accepted, adjacent days were untouched, and no marker is needed |
 | Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
 | Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
 
@@ -541,8 +560,9 @@ claim for every boiler with a similar panel.
   were unreliable. Base-layout solar fields remain available, not verified.
 - Reading an installer or diagnostic number successfully does not confirm
   its physical meaning, scale, or unit. Panel comparisons are still needed.
-- There is no fault-reset command, schedule editor, or automatic discovery
-  of fitted circuits and modules.
+- There is no fault-reset command or automatic discovery of fitted circuits
+  and modules. Schedules are writable one day at a time, but there is no
+  program-selection control.
 
 ### Notes for register-map contributors
 

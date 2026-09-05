@@ -127,6 +127,20 @@ def _day_intervals(words: list[int]) -> DaySchedule:
     return intervals
 
 
+def _day_words(intervals: DaySchedule) -> list[int]:
+    total = _SLOTS_PER_REGISTER * _REGISTERS_PER_DAY
+    words = [0] * _REGISTERS_PER_DAY
+    for start, end in intervals:
+        low = (start.hour * 60 + start.minute) // 30
+        high = total if end == time(0, 0) else (end.hour * 60 + end.minute) // 30
+        if not 0 <= low < high <= total:
+            raise ValueError(f"invalid comfort period {start}-{end}")
+        for slot in range(low, high):
+            register, offset = divmod(slot, _SLOTS_PER_REGISTER)
+            words[register] |= 1 << (_SLOTS_PER_REGISTER - 1 - offset)
+    return words
+
+
 class ScheduleDayField(RegisterField[DaySchedule]):
     """One day of a comfort schedule, 48 half-hour slots over three registers."""
 
@@ -134,10 +148,16 @@ class ScheduleDayField(RegisterField[DaySchedule]):
         """Decode three registers into comfort periods, a set bit meaning comfort."""
         return _day_intervals(words)
 
+    def encode(self, value: Any, scale_exponent: int | None = None) -> list[int]:
+        """Encode comfort periods into three registers, a set bit meaning comfort."""
+        return _day_words(value)
 
-def schedule_day(address: int) -> ScheduleDayField:
-    """Return a read-only day of comfort periods spanning three registers."""
-    return ScheduleDayField(address, count=_REGISTERS_PER_DAY)
+
+def schedule_day(address: int, *, writable: bool = False) -> ScheduleDayField:
+    """Return a day of comfort periods spanning three registers."""
+    return ScheduleDayField(
+        address, count=_REGISTERS_PER_DAY, writable=writable, force_fc16=writable
+    )
 
 
 class _TimeProgram:

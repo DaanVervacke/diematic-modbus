@@ -11,6 +11,7 @@ from ._base import _Regulator
 from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
 from .faults import MODULENS_FAULTS
 from .fields import (
+    DaySchedule,
     WeekSchedule,
     code_map,
     fault_code,
@@ -51,6 +52,15 @@ SCHEDULE_BASES = {
 
 _DAY_STRIDE = 3
 _DAYS = 7
+_WEEKDAY_FIELDS = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
 _DAY_WINDOWS = tuple(
     (day * _DAY_STRIDE, day * _DAY_STRIDE + _DAY_STRIDE - 1) for day in range(_DAYS)
 )
@@ -159,13 +169,13 @@ class WeekProgram(Component):
     # Longer schedule reads return a different internal layout.
     register_ranges = _DAY_WINDOWS
 
-    monday = schedule_day(0)
-    tuesday = schedule_day(3)
-    wednesday = schedule_day(6)
-    thursday = schedule_day(9)
-    friday = schedule_day(12)
-    saturday = schedule_day(15)
-    sunday = schedule_day(18)
+    monday = schedule_day(0, writable=True)
+    tuesday = schedule_day(3, writable=True)
+    wednesday = schedule_day(6, writable=True)
+    thursday = schedule_day(9, writable=True)
+    friday = schedule_day(12, writable=True)
+    saturday = schedule_day(15, writable=True)
+    sunday = schedule_day(18, writable=True)
 
     @property
     def week(self) -> WeekSchedule:
@@ -181,9 +191,15 @@ class WeekProgram(Component):
         )
         return {day + 1: periods or [] for day, periods in enumerate(days)}
 
+    async def set_day(self, weekday: int, periods: DaySchedule) -> None:
+        """Write program P4 comfort periods for one weekday, 1 Monday to 7 Sunday."""
+        if not 1 <= weekday <= _DAYS:
+            raise ValueError(f"weekday must be 1 to {_DAYS}, got {weekday}")
+        await self.write(_WEEKDAY_FIELDS[weekday - 1], periods)
+
 
 class Schedules:
-    """Read-only heating P4, hot-water, and auxiliary schedules."""
+    """Heating P4, hot-water, and auxiliary schedules, writable one day at a time."""
 
     def __init__(self, unit: ModbusUnit) -> None:
         """Build one program bundle per exposed schedule block."""
