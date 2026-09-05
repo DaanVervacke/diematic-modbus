@@ -370,6 +370,9 @@ an empty list clears the day. This edits the stored P4 program, which drives
 the boiler only while P4 is the selected program. Program selection is not
 writable, so set P4 at the panel if it is not already active.
 
+To change a whole week, call `set_day` once per weekday. The boiler wraps any
+write wider than one day, so there is no single-call week write.
+
 ## Full feature reference
 
 These tables describe the implementation, not a promise that each reading
@@ -543,6 +546,7 @@ claim for every boiler with a similar panel.
 | Auxiliary schedule | Readable, but no panel page was available to compare it with |
 | Program-selection writes | Attempts on the test boiler were rejected. The library keeps this read-only |
 | Schedule writes | `set_day()` verified on 2026-09-05: wrote a single window, all-comfort and all-off to circuit B Monday, each read back exactly, then restored. Plain per-day three-register writes are accepted, adjacent days were untouched, and no marker is needed |
+| Wide schedule writes | A single frame wider than one day wraps. Probed 2026-09-05: one six-register write left day one correct but scrambled day two, the same internal five-word-per-day layout that wraps wide reads. A whole week must be seven separate `set_day` calls, so there is no single-frame week write |
 | Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
 | Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
 
