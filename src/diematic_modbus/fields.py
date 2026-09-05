@@ -26,7 +26,9 @@ class Float10Field(RegisterField[float | None]):
 
     none_values: tuple[int, ...] = ()
 
-    def decode(self, words: list[int], scale_exponent: int | None = None) -> Any:
+    def decode(
+        self, words: list[int], scale_exponent: int | None = None
+    ) -> float | None:
         """Convert tenths to a number, returning None for known missing-value codes."""
         raw = words[0]
         if raw in _NO_SENSOR or raw in self.none_values:
@@ -77,8 +79,8 @@ def masked_enum[E: IntEnum](
     return NumberField(address, signed=False, convert=_MaskedEnum(mask, enum_type))
 
 
-class _FaultCode:
-    """Map a fault code to its label, no-fault to None, unknown to the raw int."""
+class _CodeLabel:
+    """Map a code to its label, an ok code to None, an unknown code to the raw int."""
 
     def __init__(self, table: dict[int, str], ok: frozenset[int]) -> None:
         self.table = table
@@ -94,12 +96,12 @@ def fault_code(
     address: int, table: dict[int, str], *, ok: tuple[int, ...] = (0xFFFF,)
 ) -> NumberField[str | int | None]:
     """Map a fault register to a label, no-fault codes to None, unknown to raw int."""
-    return NumberField(address, signed=False, convert=_FaultCode(table, frozenset(ok)))
+    return NumberField(address, signed=False, convert=_CodeLabel(table, frozenset(ok)))
 
 
 def code_map(address: int, table: dict[int, str]) -> NumberField[str | int]:
     """Map a register to a label from ``table``, unknown codes to the raw int."""
-    return NumberField(address, signed=False, convert=_FaultCode(table, frozenset()))
+    return NumberField(address, signed=False, convert=_CodeLabel(table, frozenset()))
 
 
 def _slot_time(slot: int) -> time:
@@ -143,7 +145,9 @@ def _day_words(intervals: DaySchedule) -> list[int]:
 class ScheduleDayField(RegisterField[DaySchedule]):
     """One day of a comfort schedule, 48 half-hour slots over three registers."""
 
-    def decode(self, words: list[int], scale_exponent: int | None = None) -> Any:
+    def decode(
+        self, words: list[int], scale_exponent: int | None = None
+    ) -> DaySchedule:
         """Decode three registers into comfort periods, a set bit meaning comfort."""
         return _day_intervals(words)
 
