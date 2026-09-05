@@ -56,6 +56,18 @@ async def test_isystem_reads_decode_across_bundles(mock_modbus_unit):
     assert boiler.identity.year == 26
 
 
+async def test_isystem_parity_registers_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({605: 247, 654: 3, 660: 3, 662: 100, 663: 420})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.circuit_a.ambient_influence == 3
+    assert boiler.circuit_b.ambient_influence == 3
+    assert boiler.circuit_b.supply_temp == 24.7
+    assert boiler.circuit_b.min_temp == 10.0
+    assert boiler.circuit_b.max_temp == 42.0
+
+
 async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):
     _seed(mock_modbus_unit)
     boiler = DiematicISystem(mock_modbus_unit)

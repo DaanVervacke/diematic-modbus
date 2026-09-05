@@ -7,8 +7,8 @@ from diematic_modbus import Diematic, DiematicVariant, HeatingMode, HotWaterMode
 
 async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
-    await diematic.hot_water.write("day_target", 53)
-    assert mock_modbus_unit.holding[59] == 550
+    await diematic.hot_water.write("day_target", 53.4)
+    assert mock_modbus_unit.holding[59] == 530
 
 
 async def test_settings_boiler_max_writes(mock_modbus_unit):
@@ -21,6 +21,20 @@ async def test_circuit_slope_writes(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
     await diematic.circuit_a.write("slope", 1.5)
     assert mock_modbus_unit.holding[20] == 15
+
+
+async def test_circuit_slope_clamps_high(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.circuit_a.write("slope", 5)
+    assert mock_modbus_unit.holding[20] == 40
+
+
+async def test_summer_winter_snaps_and_clamps(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.settings.write("summer_winter_temp", 22.3)
+    assert mock_modbus_unit.holding[8] == 225
+    await diematic.settings.write("summer_winter_temp", 40)
+    assert mock_modbus_unit.holding[8] == 305
 
 
 async def test_set_clock_writes_blocks_with_marker(mock_modbus_unit):

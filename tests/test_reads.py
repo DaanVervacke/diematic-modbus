@@ -66,6 +66,21 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.identity.year == 25
 
 
+async def test_fork_registers_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update(
+        {9: 0x8032, 19: 3, 28: 3, 30: 100, 31: 420, 33: 246}
+    )
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.async_update()
+    assert diematic.settings.ext_frost_threshold == -5.0
+    assert diematic.circuit_a.ambient_influence == 3
+    assert diematic.circuit_b.ambient_influence == 3
+    assert diematic.circuit_b.min_temp == 10.0
+    assert diematic.circuit_b.max_temp == 42.0
+    assert diematic.circuit_b.supply_temp == 24.6
+
+
 async def test_boiler_type_decodes_controller_name(mock_modbus_unit):
     _seed(mock_modbus_unit)
     mock_modbus_unit.holding[457] = 24

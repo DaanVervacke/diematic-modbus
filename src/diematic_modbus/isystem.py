@@ -8,7 +8,11 @@ layout lacks. Circuit mode is read and written through the low registers 17 and
 mode register. Addresses and scales come from the iSystem map in
 IgnacioHR/diematic_server and are verified live before writes are trusted. The
 schedule blocks and program selection registers follow the De Dietrich register
-sheet and ngraziano/isystem-to-mqtt, which names each block program P4.
+sheet and ngraziano/isystem-to-mqtt, which names each block program P4. Circuit
+ambient influence (654, 660), circuit B min and max (662, 663) and circuit B
+supply temperature (605) come from ngraziano and were confirmed live against the
+matching base page values. The external frost threshold has no iSystem register
+and stays base-only.
 """
 
 from __future__ import annotations
@@ -106,6 +110,7 @@ class CircuitA(ISystemComponent):
     mode = masked_enum(_MODE_A, _HEATING_MASK, HeatingMode)
     program = time_program(231)
     pump_on = bit(427, 4)
+    ambient_influence = integer(654, signed=False)
     slope = float10(655, writable=_SLOPE, force_fc16=True, unit="K/K")
     day_target = float10(650, writable=_ZONE_DAY, force_fc16=True, unit="°C")
     night_target = float10(651, writable=_ZONE_DAY, force_fc16=True, unit="°C")
@@ -117,9 +122,13 @@ class CircuitB(ISystemComponent):
 
     room_temp = float10(616, unit="°C")
     calc_temp = float10(617, unit="°C")
+    supply_temp = float10(605, unit="°C")
     mode = masked_enum(_MODE_B, _HEATING_MASK, HeatingMode)
     program = time_program(232)
     pump_on = bit(428, 4)
+    ambient_influence = integer(660, signed=False)
+    min_temp = float10(662, unit="°C")
+    max_temp = float10(663, unit="°C")
     day_target = float10(656, writable=_ZONE_DAY, force_fc16=True, unit="°C")
     night_target = float10(657, writable=_ZONE_DAY, force_fc16=True, unit="°C")
     antifreeze_target = float10(658, writable=_ZONE_FROST, force_fc16=True, unit="°C")
