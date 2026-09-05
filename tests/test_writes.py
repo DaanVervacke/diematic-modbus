@@ -2,7 +2,13 @@ from datetime import datetime
 
 import pytest
 
-from diematic_modbus import Diematic, DiematicVariant, HeatingMode, HotWaterMode
+from diematic_modbus import (
+    Diematic,
+    DiematicISystem,
+    DiematicVariant,
+    HeatingMode,
+    HotWaterMode,
+)
 
 
 async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
@@ -99,3 +105,64 @@ async def test_reading_field_is_not_writable(mock_modbus_unit, field):
     diematic = Diematic(mock_modbus_unit)
     with pytest.raises(AttributeError):
         await diematic.sensors.write(field, 10)
+
+
+@pytest.mark.parametrize(
+    ("regulator_type", "method"),
+    [
+        (Diematic, "set_circuit_a_mode"),
+        (Diematic, "set_circuit_b_mode"),
+        (DiematicISystem, "set_circuit_a_mode"),
+        (DiematicISystem, "set_circuit_b_mode"),
+        (DiematicISystem, "set_circuit_c_mode"),
+    ],
+)
+@pytest.mark.parametrize("mode", [HeatingMode.HOLIDAY, 33, 7, 0x58])
+async def test_unsupported_heating_mode_rejected_before_io(
+    mock_modbus_unit, regulator_type, method, mode
+):
+    boiler = regulator_type(mock_modbus_unit, variant=DiematicVariant.DIEMATIC_4)
+    writes = []
+    mock_modbus_unit.on_write(writes.append)
+    with pytest.raises(ValueError):
+        await getattr(boiler, method)(mode)
+    assert mock_modbus_unit.read_events == []
+    assert writes == []
+
+
+@pytest.mark.parametrize("regulator_type", [Diematic, DiematicISystem])
+async def test_unknown_hot_water_mode_rejected_before_io(
+    mock_modbus_unit, regulator_type
+):
+    boiler = regulator_type(mock_modbus_unit, variant=DiematicVariant.DIEMATIC_4)
+    writes = []
+    mock_modbus_unit.on_write(writes.append)
+    with pytest.raises(ValueError):
+        await boiler.set_hot_water_mode(64)
+    assert mock_modbus_unit.read_events == []
+    assert writes == []
+
+
+@pytest.mark.parametrize(
+    ("regulator_type", "address"), [(Diematic, 17), (DiematicISystem, 659)]
+)
+@pytest.mark.parametrize("mode", list(HotWaterMode))
+async def test_hot_water_write_preserves_holiday(
+    mock_modbus_unit, regulator_type, address, mode
+):
+    mock_modbus_unit.holding[address] = 0xA1
+    boiler = regulator_type(mock_modbus_unit)
+    await boiler.set_hot_water_mode(mode)
+    assert mock_modbus_unit.holding[address] == 0xA1 | int(mode)
+
+
+@pytest.mark.parametrize(
+    "mode", [mode for mode in HeatingMode if mode is not HeatingMode.HOLIDAY]
+)
+async def test_known_heating_modes_preserve_unknown_hot_water_bits(
+    mock_modbus_unit, mode
+):
+    mock_modbus_unit.holding[659] = 0xC8
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.set_circuit_b_mode(mode)
+    assert mock_modbus_unit.holding[659] == 0xC0 | int(mode)

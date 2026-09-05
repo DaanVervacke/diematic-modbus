@@ -21,10 +21,11 @@ class HeatingMode(IntEnum):
     PERM_DAY = 4
     PERM_NIGHT = 2
     ANTIFREEZE = 1
+    HOLIDAY = 33
 
 
 class HotWaterMode(IntEnum):
-    """Hot-water mode held in bits 4 and 6 of the circuit A mode register."""
+    """Hot-water mode held in bits 4 and 6 of a shared heating mode register."""
 
     AUTO = 0
     TEMP = 80
@@ -40,12 +41,7 @@ class ActiveMode(IntEnum):
 
 
 class Alarm(IntEnum):
-    """Condensing (DPSM) fault codes at register 465, unverified against hardware.
-
-    The authoritative De Dietrich sheet leaves the DPSM fault table blank and the
-    classic table is for non-DPSM boards, so these come from Benoit3's boiler.
-    Unknown codes surface as raw integers rather than mapping here.
-    """
+    """Unverified legacy fault codes, unused by sensor alarm decoding."""
 
     OK = 0
     RETURN_SENSOR_FAULT = 10

@@ -26,7 +26,7 @@ class UpdateReport:
 
     @property
     def complete(self) -> bool:
-        """Whether every bundle refreshed."""
+        """Whether this poll reported no read failures."""
         return not self.failed
 
 
@@ -51,7 +51,7 @@ class _Regulator:
         bundles: dict[str, Component],
         read_once: frozenset[str],
     ) -> None:
-        """Wire the bundles into a pooled poll group and a read-once set."""
+        """Group bundles for regular polling or a single successful read."""
         self._unit = unit
         self._bundles = bundles
         self._poll = [c for n, c in bundles.items() if n not in read_once]
@@ -60,7 +60,7 @@ class _Regulator:
         self._pending_once = {n: bundles[n] for n in read_once}
 
     async def async_update(self) -> UpdateReport:
-        """Refresh every bundle, keeping stale values for any that fail."""
+        """Poll bundles, skipping cached bundles and keeping stale values on failure."""
         updated: set[str] = set()
         failed: dict[str, ModbusError] = {}
         await self._poll_bundles(updated, failed)
@@ -108,31 +108,40 @@ class _Regulator:
                 del self._pending_once[name]
 
     async def async_read_raw(self) -> dict[str, dict[int, int | bool]]:
-        """Read every register this layout serves, undecoded, for diagnostics."""
+        """Read mapped registers without updating decoded values."""
         group = ComponentGroup(self._unit, list(self._bundles.values()))
         return await group.async_read_raw(notify=False)
 
     async def set_circuit_a_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit A mode, ignored where circuit A is absent."""
+        """Set heating circuit A mode regardless of its presence flag."""
         await self._write_mode(self._mode_a_addr, _HEATING_MASK, int(mode))
 
     async def set_circuit_b_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit B mode."""
+        """Set heating circuit B mode regardless of its presence flag."""
         await self._write_mode(self._mode_b_addr, _HEATING_MASK, int(mode))
 
     async def set_hot_water_mode(self, mode: HotWaterMode) -> None:
-        """Set hot-water mode, ignored where the target register is absent."""
+        """Set hot-water mode while preserving the shared heating-mode bits."""
         await self._write_mode(self._hot_water_addr, _HOT_WATER_MASK, int(mode))
 
     async def _write_mode(self, address: int, mask: int, code: int) -> None:
+        if mask == _HEATING_MASK:
+            mode = HeatingMode(code)
+            if mode is HeatingMode.HOLIDAY:
+                raise ValueError(
+                    "Holiday mode is read-only. Set it on the control panel."
+                )
+        else:
+            HotWaterMode(code)
+        # Heating and hot-water modes share a register, so preserve the other bits.
         (current,) = await self._unit.read_holding_registers(address, 1)
         await self._unit.write_registers(address, [(current & ~mask) | code])
         if self._nudges_panel and self.variant is DiematicVariant.DIEMATIC_4:
             await self._nudge_panel()
 
     async def _nudge_panel(self) -> None:
-        # ponytail: firmware-empirical panel refresh on Diematic 4. The exact
-        # per-mode antifreeze-day sequence is not ported, revisit on hardware.
+        # Only base-layout Diematic 4 uses this refresh. Broader testing is needed.
+        # Register 13 returns unrelated data when read, so do not read it back.
         await self._unit.write_registers(_ANTIFREEZE_DAYS, [1])
         await asyncio.sleep(0.5)
         await self._unit.write_registers(_ANTIFREEZE_DAYS, [0])

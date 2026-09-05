@@ -1,4 +1,6 @@
-from diematic_modbus.enums import HeatingMode, HotWaterMode
+import pytest
+
+from diematic_modbus.enums import ActiveMode, HeatingMode, HotWaterMode
 from diematic_modbus.fields import Float10Field, masked_enum, snap_clamp
 
 
@@ -39,3 +41,25 @@ def test_masked_enum_splits_shared_register():
     hot_water = masked_enum(17, 0x50, HotWaterMode)
     assert heating.decode([0x58]) is HeatingMode.AUTO
     assert hot_water.decode([0x58]) is HotWaterMode.TEMP
+
+
+@pytest.mark.parametrize(
+    ("enum_type", "mask", "raw", "expected"),
+    [
+        (HeatingMode, 0x2F, 0x57, 7),
+        (HotWaterMode, 0x50, 0x48, 64),
+        (ActiveMode, 0x06, 0x86, 6),
+    ],
+)
+def test_unrecognised_modes_remain_readable(enum_type, mask, raw, expected):
+    field = masked_enum(0, mask, enum_type)
+    value = field.decode([raw])
+    assert type(value) is int
+    assert value == expected
+
+
+def test_holiday_mode_preserves_hot_water_mode():
+    heating = masked_enum(0, 0x2F, HeatingMode)
+    hot_water = masked_enum(0, 0x50, HotWaterMode)
+    assert heating.decode([0x71]) is HeatingMode.HOLIDAY
+    assert hot_water.decode([0x71]) is HotWaterMode.TEMP

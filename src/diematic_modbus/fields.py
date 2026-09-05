@@ -18,18 +18,17 @@ _PROGRAMS = 4
 
 _SIGN_BIT = 0x8000
 _MAGNITUDE = 0x7FFF
-# Raw values De Dietrich returns for an absent sensor: 0xFFFF and 0x8CCC (the
-# latter confirmed live on this boiler at both smoke temp 454 and register 604).
+# Both values mean an absent sensor rather than a negative reading.
 _NO_SENSOR = frozenset((0xFFFF, 0x8CCC))
 
 
 class Float10Field(RegisterField[float]):
-    """A register in tenths of a unit with sign-magnitude negatives."""
+    """A value in tenths with a separate sign bit for negative numbers."""
 
     none_values: tuple[int, ...] = ()
 
     def decode(self, words: list[int], scale_exponent: int | None = None) -> Any:
-        """Decode a tenths register, mapping absent-sensor sentinels to None."""
+        """Convert tenths to a number, returning None for known missing-value codes."""
         raw = words[0]
         if raw in _NO_SENSOR or raw in self.none_values:
             return None
@@ -51,31 +50,31 @@ def float10(
     unit: str | None = None,
     none_values: tuple[int, ...] = (),
 ) -> Float10Field:
-    """Return a signed tenths register where an absent-sensor sentinel means None.
-
-    ``none_values`` adds register-specific no-value codes such as 101 for
-    anticipation and 150 for footprint, on top of the shared 0xFFFF and 0x8CCC.
-    """
+    """Build a tenths field, optionally recognising extra missing-value codes."""
     field = Float10Field(address, writable=writable, force_fc16=force_fc16, unit=unit)
     field.none_values = none_values
     return field
 
 
 class _MaskedEnum[E: IntEnum]:
-    """Map a masked register value to an enum member."""
+    """Decode known modes and keep unknown mode bits as an integer."""
 
     def __init__(self, mask: int, enum_type: type[E]) -> None:
         self.mask = mask
         self.enum_type = enum_type
 
-    def __call__(self, raw: int) -> E:
-        return self.enum_type(raw & self.mask)
+    def __call__(self, raw: int) -> E | int:
+        value = raw & self.mask
+        try:
+            return self.enum_type(value)
+        except ValueError:
+            return value
 
 
 def masked_enum[E: IntEnum](
     address: int, mask: int, enum_type: type[E]
-) -> NumberField[E]:
-    """Build a register field holding one enum packed into ``mask`` of its bits."""
+) -> NumberField[E | int]:
+    """Read mode bits as a known enum member or an unknown integer code."""
     return NumberField(address, signed=False, convert=_MaskedEnum(mask, enum_type))
 
 
@@ -147,20 +146,17 @@ class _TimeProgram:
     def __call__(self, raw: int) -> int | None:
         if raw in _NO_SENSOR:
             return None
+        # The low byte indexes seven days per program across four programs.
         return (raw & 0xFF) // _DAYS % _PROGRAMS + 1
 
 
 def time_program(address: int) -> NumberField[int]:
-    """Return the selected time program, 1 to 4, from a PROG.NUM register.
-
-    The low byte is a row into a day table of four programs of seven days per
-    circuit, so program = row // 7 % 4. Confirmed on the console for every value.
-    """
+    """Read the selected heating program as a number from 1 to 4."""
     return NumberField(address, signed=False, convert=_TimeProgram())
 
 
 def snap_clamp(step: float, low: float, high: float) -> WriteValidator:
-    """Return a validator that snaps to ``step`` and clamps to ``[low, high]``."""
+    """Round requests to ``step`` and keep them between ``low`` and ``high``."""
 
     def validate(value: Any) -> float:
         snapped = round(float(value) / step) * step
