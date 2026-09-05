@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, bit, integer
 
@@ -23,6 +25,7 @@ from .models import MODEL_CODES
 _MODE_A_ISYSTEM = 653
 _MODE_B_ISYSTEM = 659
 _MODE_C_ISYSTEM = 667
+_CLOCK_BASE = 679
 
 # Keep pooled reads within these windows to avoid unsupported register gaps.
 ISYSTEM_WINDOWS = (
@@ -360,3 +363,15 @@ class DiematicISystem(_Regulator):
     async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
         """Set heating circuit C mode regardless of its presence flag."""
         await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, int(mode))
+
+    async def set_clock(self, moment: datetime) -> None:
+        """Set the regulator clock from ``moment``."""
+        block = [
+            moment.hour,
+            moment.minute,
+            moment.isoweekday(),
+            moment.day,
+            moment.month,
+            moment.year % 100,
+        ]
+        await self._unit.write_registers(_CLOCK_BASE, block)

@@ -54,6 +54,13 @@ async def test_set_clock_writes_blocks_with_marker(mock_modbus_unit):
     assert mock_modbus_unit.holding[110] == 0xFF00 | 26
 
 
+async def test_isystem_set_clock_writes_plain_block(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.set_clock(datetime(2026, 9, 4, 14, 5))
+    written = [mock_modbus_unit.holding[a] for a in range(679, 685)]
+    assert written == [14, 5, 5, 4, 9, 26]
+
+
 async def test_hot_water_setpoint_clamps_high(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
     await diematic.hot_water.write("day_target", 200)

@@ -24,7 +24,7 @@ you can help check compatibility with your boiler without writing Python.
 | Weekly schedules | On iSystem: heating program P4, hot-water and auxiliary schedules, and which heating program is selected | No schedule editing or program selection |
 | Seasonal settings | Summer/winter changeover temperature and boiler temperature limits | Changeover temperature, and boiler limits through the base layout |
 | Installer information | On iSystem: calibration, tuning parameters and additional diagnostic codes | Read-only |
-| Identity and clock | Reported type code, controller/software code, date and time | Clock setting through the base layout is implemented but untested on hardware |
+| Identity and clock | Reported type code, controller/software code, date and time | iSystem clock setting verified on the test boiler. Base-layout clock setting is implemented but untested on a base-layout boiler |
 
 Availability depends on the control panel and fitted equipment. A *heating
 circuit* is one of the separately controlled parts of the heating system,
@@ -432,7 +432,7 @@ restrictions. Writable values can also be read.
 | Hot-water mode | Yes | Yes | `set_hot_water_mode()` |
 | Summer/winter changeover temperature | 15 to 30.5 °C, 0.5 °C steps | Same | `settings.write("summer_winter_temp", value)` |
 | Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `boiler_max` |
-| Date and time | `set_clock(datetime)` is implemented, hardware-untested | Read-only | `set_clock()` |
+| Date and time | `set_clock(datetime)`, untested on a base-layout boiler | `set_clock(datetime)`, verified on the iSystem test boiler | `set_clock()` |
 
 `circuit_*` in this table means the appropriate circuit name, not literal
 Python syntax. Both layouts also read the clock and reported type code from
@@ -527,7 +527,7 @@ claim for every boiler with a similar panel.
 | Auxiliary schedule | Readable, but no panel page was available to compare it with |
 | Program-selection writes | Attempts on the test boiler were rejected. The library keeps this read-only |
 | Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
-| Clock writes | Not tested on hardware |
+| Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
 
 ### Known limits
 
