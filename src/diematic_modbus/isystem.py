@@ -8,7 +8,13 @@ from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, bit, integer
 
 from ._base import _Regulator
-from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
+from .enums import (
+    ActiveMode,
+    DiematicVariant,
+    HeatingMode,
+    HotWaterMode,
+    HotWaterPriority,
+)
 from .faults import MODULENS_FAULTS
 from .fields import (
     DaySchedule,
@@ -287,7 +293,7 @@ class Diagnostics(ISystemComponent):
 
     boiler_active_mode = integer(644, signed=False)
     aux_active_mode = masked_enum(641, 0x06, ActiveMode)
-    dhw_priority = integer(674, signed=False)
+    dhw_priority = masked_enum(674, 0xFF, HotWaterPriority)
     pcu_state = integer(710, signed=False)
     pcu_substate = integer(711, signed=False)
     pcu_block = integer(712, signed=False)
