@@ -103,6 +103,18 @@ async def test_isystem_research_registers_decode(mock_modbus_unit):
     assert boiler.settings.boiler_max == 75.0
 
 
+async def test_isystem_derogation_bits_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({659: 0x02 | 0x40, 667: 0x08 | 0x80})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.circuit_b.mode is HeatingMode.PERM_NIGHT
+    assert boiler.circuit_b.permanent_derogation is True
+    assert boiler.circuit_b.all_circuits_derogation is False
+    assert boiler.circuit_c.permanent_derogation is False
+    assert boiler.circuit_c.all_circuits_derogation is True
+
+
 async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     _seed(mock_modbus_unit)
     mock_modbus_unit.holding.update(

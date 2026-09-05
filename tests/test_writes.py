@@ -121,6 +121,26 @@ async def test_setting_hot_water_mode_preserves_heating_bits(mock_modbus_unit):
     assert word & 0x2F == int(HeatingMode.AUTO)
 
 
+async def test_isystem_circuit_slope_writes_and_clamps(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.circuit_b.write("slope", 0.9)
+    assert mock_modbus_unit.holding[661] == 9
+    await boiler.circuit_c.write("slope", 5)
+    assert mock_modbus_unit.holding[669] == 40
+
+
+async def test_isystem_circuit_min_max_write_plain(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.circuit_b.write("min_temp", 12.0)
+    await boiler.circuit_b.write("max_temp", 43.0)
+    assert mock_modbus_unit.holding[662] == 120
+    assert mock_modbus_unit.holding[663] == 430
+    await boiler.circuit_c.write("min_temp", 15.0)
+    await boiler.circuit_c.write("max_temp", 55.0)
+    assert mock_modbus_unit.holding[670] == 150
+    assert mock_modbus_unit.holding[671] == 550
+
+
 async def test_diematic3_does_not_nudge_panel(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit, variant=DiematicVariant.DIEMATIC_3)
     await diematic.set_circuit_a_mode(HeatingMode.AUTO)
