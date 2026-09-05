@@ -1,10 +1,4 @@
-"""De Dietrich model and controller codes for the type register (457).
-
-Transcribed from IgnacioHR/diematic_server (MIT). The low codes are boiler
-chassis, and codes 20 to 25 are controller generations
-(a Diematic 4 panel reports 24, "D4"). The register names the controller or
-chassis the panel reports, not always the physical boiler model.
-"""
+"""Tentative type-register labels, not reliable physical boiler model names."""
 
 from __future__ import annotations
 

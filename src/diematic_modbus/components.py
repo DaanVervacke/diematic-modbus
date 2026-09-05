@@ -1,12 +1,4 @@
-"""Diematic register bundles grouped by function.
-
-Low registers (1-123) are the Diematic base page. The 427/428 bit words and the
-451-472 block are the modular and DPSM condensing-module pages, present on a
-Diematic 3 fitted with a DPSM condensing boiler. Addresses and scales are
-confirmed against the De Dietrich register sheet and ngraziano/isystem-to-mqtt.
-Registers 9, 19, 28, 30, 31 and 33 come from ababilone/Diematic_to_MQTT and were
-confirmed live on the test boiler.
-"""
+"""Base-layout Diematic register bundles grouped by function."""
 
 from __future__ import annotations
 
@@ -17,9 +9,7 @@ from .faults import MODULENS_FAULTS
 from .fields import code_map, fault_code, float10, masked_enum, snap_clamp
 from .models import MODEL_CODES
 
-# The register windows the Diematic 3 and 4 regulators answer, copied from the
-# polling banks of the Diematic_to_MQTT project and extended to 472 for the DPSM
-# instant-power registers. Reads never touch a gap.
+# Keep pooled reads within these windows to avoid unsupported register gaps.
 HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472))
 
 _HOT_WATER = snap_clamp(1.0, 10.0, 80.0)
@@ -29,7 +19,7 @@ _SUMMER_WINTER = snap_clamp(0.5, 15.0, 30.5)
 
 
 class DiematicComponent(Component):
-    """A Diematic register bundle constrained to the answered windows."""
+    """A Diematic register bundle limited to the supported read windows."""
 
     register_ranges = HOLDING_WINDOWS
 

@@ -1,9 +1,4 @@
-"""De Dietrich Modulens/DPSM fault codes for the alarm register (465).
-
-Transcribed from ngraziano/isystem-to-mqtt (MIT), which decodes the same
-condensing-family error word. Live hardware confirmed this family: the alarm
-register reads 0xFFFF for no fault. Codes are unverified against a real fault.
-"""
+"""Modulens/DPSM alarm labels, unverified against actual faults."""
 
 from __future__ import annotations
 
@@ -147,4 +142,5 @@ MODULENS_FAULTS: dict[int, str] = {
     0x201C: "L254:DEF.INCONNU",
 }
 
+# No-fault marker observed on the test boiler, not a validation of fault labels.
 NO_FAULT = 0xFFFF

@@ -1,26 +1,4 @@
-"""The De Dietrich iSystem register layout.
-
-A parallel layout for boilers whose firmware exposes the iSystem registers.
-Sensors and setpoints live in the iSystem address page (601 outdoor, 602 boiler
-and so on), with circuit C and per-circuit calculated setpoints that the low
-layout lacks. Circuit mode is read and written through the iSystem derogation
-registers 653 (A), 659 (B) and 667 (C), confirmed live on the boiler: writes to
-659 and 667 land and the panel follows with no nudge, while 653 is rejected where
-circuit A is absent, the same way the low register 17 is. Hot-water mode rides
-bits 4 and 6 of those same registers (bit 16 comfort, bit 64 comfort until a
-time) and is driven through the writable circuit B register 659. The
-comfort-until end time is held inside the panel and is not exposed over Modbus.
-Addresses and scales come from the iSystem map in
-IgnacioHR/diematic_server and are verified live before writes are trusted. The
-schedule blocks and program selection registers follow the De Dietrich register
-sheet and ngraziano/isystem-to-mqtt, which names each block program P4. Circuit
-ambient influence (654, 660), circuit B min and max (662, 663) and circuit B
-supply temperature (605) come from ngraziano and were confirmed live against the
-matching base page values. The external frost threshold has no iSystem register
-and stays base-only. Smoke 604, pressure 610, boiler min and max 677/678, circuit
-B slope 661, and the circuit C block 668-671 come from ngraziano-go and
-45clouds/diematic2mqtt, confirmed live on the boiler.
-"""
+"""Diematic register bundles and controls for the iSystem layout."""
 
 from __future__ import annotations
 
@@ -46,6 +24,7 @@ _MODE_A_ISYSTEM = 653
 _MODE_B_ISYSTEM = 659
 _MODE_C_ISYSTEM = 667
 
+# Keep pooled reads within these windows to avoid unsupported register gaps.
 ISYSTEM_WINDOWS = (
     (8, 8),
     (231, 233),
@@ -85,7 +64,7 @@ _SUMMER_WINTER = snap_clamp(0.5, 15.0, 30.5)
 
 
 class ISystemComponent(Component):
-    """A 600 bank register bundle constrained to the answered windows."""
+    """An iSystem register bundle limited to the supported read windows."""
 
     register_ranges = ISYSTEM_WINDOWS
 
@@ -112,6 +91,7 @@ class HotWater(ISystemComponent):
 
     temp = float10(603, unit="°C")
     bottom_temp = float10(623, unit="°C")
+    # Requested hot-water mode shares circuit B's register, not active-mode 640.
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
@@ -154,10 +134,7 @@ class CircuitB(ISystemComponent):
 
 
 class CircuitC(ISystemComponent):
-    """Heating circuit C readings and setpoints, present only in the iSystem layout.
-
-    Mode rides the iSystem derogation register 667, confirmed writable live.
-    """
+    """Heating circuit C readings and setpoints in the iSystem layout."""
 
     room_temp = float10(618, unit="°C")
     calc_temp = float10(619, unit="°C")
@@ -174,8 +151,9 @@ class CircuitC(ISystemComponent):
 
 
 class WeekProgram(Component):
-    """One weekly comfort program, three registers per day, read a day at a time."""
+    """One weekly comfort program read as seven separate three-register days."""
 
+    # Longer schedule reads return a different internal layout.
     register_ranges = _DAY_WINDOWS
 
     monday = schedule_day(0)
@@ -188,7 +166,7 @@ class WeekProgram(Component):
 
     @property
     def week(self) -> WeekSchedule:
-        """The comfort periods keyed by isoweekday, 1 for Monday."""
+        """Comfort periods keyed by weekday, from 1 for Monday to 7 for Sunday."""
         days = (
             self.monday,
             self.tuesday,
@@ -202,11 +180,7 @@ class WeekProgram(Component):
 
 
 class Schedules:
-    """The weekly comfort programs the boiler exposes over Modbus.
-
-    Each heating circuit exposes only its program P4. Hot water and the auxiliary
-    circuit each have a single program.
-    """
+    """Read-only heating P4, hot-water, and auxiliary schedules."""
 
     def __init__(self, unit: ModbusUnit) -> None:
         """Build one program bundle per exposed schedule block."""
@@ -250,11 +224,7 @@ class Settings(ISystemComponent):
 
 
 class Config(ISystemComponent):
-    """Installer tuning parameters in the iSystem layout, read once.
-
-    Addresses and scales come from ngraziano-go and 45clouds/diematic2mqtt,
-    confirmed live. Anticipation uses a 101 no-value code and footprint a 150 one.
-    """
+    """Installer settings and output values cached after the first successful read."""
 
     autoadapt_a = float10(247)
     autoadapt_b = float10(248)
@@ -293,11 +263,7 @@ class Config(ISystemComponent):
 
 
 class Diagnostics(ISystemComponent):
-    """Boiler state and diagnostic registers in the iSystem layout.
-
-    State words are exposed as raw codes. Addresses from ngraziano-go and
-    45clouds/diematic2mqtt, confirmed live.
-    """
+    """Boiler state and diagnostic registers in the iSystem layout."""
 
     boiler_active_mode = integer(644, signed=False)
     aux_active_mode = masked_enum(641, 0x06, ActiveMode)
@@ -341,7 +307,7 @@ class DiematicISystem(_Regulator):
         force_circuit_b: bool = False,
         force_circuit_c: bool = False,
     ) -> None:
-        """Build the 600 bank regulator over ``unit``."""
+        """Build the iSystem regulator over ``unit``."""
         self.variant = variant
         self._force_circuit_a = force_circuit_a
         self._force_circuit_b = force_circuit_b
@@ -378,19 +344,19 @@ class DiematicISystem(_Regulator):
 
     @property
     def circuit_a_present(self) -> bool:
-        """Whether heating circuit A reports a room temperature."""
+        """Whether circuit A reports a room temperature or is forced present."""
         return self._force_circuit_a or self.circuit_a.room_temp is not None
 
     @property
     def circuit_b_present(self) -> bool:
-        """Whether heating circuit B reports a room temperature."""
+        """Whether circuit B reports a room temperature or is forced present."""
         return self._force_circuit_b or self.circuit_b.room_temp is not None
 
     @property
     def circuit_c_present(self) -> bool:
-        """Whether heating circuit C reports a room temperature."""
+        """Whether circuit C reports a room temperature or is forced present."""
         return self._force_circuit_c or self.circuit_c.room_temp is not None
 
     async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit C mode through the iSystem derogation register 667."""
+        """Set heating circuit C mode regardless of its presence flag."""
         await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, int(mode))

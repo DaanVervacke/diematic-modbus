@@ -1,18 +1,4 @@
-"""Read and control a De Dietrich Diematic heating regulator over Modbus.
-
-Hand a :class:`~modbus_connection.ModbusUnit` to :class:`Diematic`. The caller
-owns the connection and its lifecycle::
-
-    from modbus_connection import ModbusTcpParams
-    from modbus_connection.tmodbus import ModbusConnection
-
-    params = ModbusTcpParams(host="192.168.1.50", port=502, framer="rtu")
-    conn = ModbusConnection(params)
-    diematic = Diematic(conn.for_unit(10))
-    await diematic.async_update()
-    print(diematic.sensors.outdoor_temp, diematic.hot_water.temp)
-    await conn.close()
-"""
+"""Read and control Diematic regulators through a caller-owned Modbus connection."""
 
 from ._base import UpdateReport
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings

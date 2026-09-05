@@ -52,20 +52,17 @@ class Diematic(_Regulator):
 
     @property
     def circuit_a_present(self) -> bool:
-        """Whether heating circuit A reports a room temperature."""
+        """Whether circuit A reports a room temperature or is forced present."""
         return self._force_circuit_a or self.circuit_a.room_temp is not None
 
     @property
     def circuit_b_present(self) -> bool:
-        """Whether heating circuit B reports a room temperature."""
+        """Whether circuit B reports a room temperature or is forced present."""
         return self._force_circuit_b or self.circuit_b.room_temp is not None
 
     async def set_clock(self, moment: datetime) -> None:
-        """Set the regulator clock from ``moment``.
-
-        Each clock register needs the 0xFF00 write-marker in its high byte, and
-        time and date are each written as one contiguous three-register block.
-        """
+        """Set the regulator clock from ``moment``."""
+        # Each clock register needs the 0xFF00 write marker in its high byte.
         time_block = [
             _CLOCK_FLAG | (moment.hour & 0xFF),
             _CLOCK_FLAG | (moment.minute & 0xFF),
