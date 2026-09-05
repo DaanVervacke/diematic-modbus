@@ -14,7 +14,7 @@ you can help check compatibility with your boiler without writing Python.
 > does not mean it has been verified on your boiler. Start with a read-only
 > test before trying any changes.
 
-## What can I do?
+## What it does
 
 | Feature | Read | Change |
 | --- | --- | --- |
@@ -73,9 +73,7 @@ or write a program.
 ### Before you start
 
 You need Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), a copy of this
-repository, and a working connection to the controller's Modbus bus. Use
-your installation's documentation or a qualified installer for wiring.
-This guide does not cover opening or wiring the boiler.
+repository, and a working connection to the controller's Modbus port.
 
 The script supports a serial adapter or a network gateway that forwards
 Modbus RTU messages unchanged. That last detail matters: a gateway configured
