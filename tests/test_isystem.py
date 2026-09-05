@@ -68,6 +68,34 @@ async def test_isystem_parity_registers_decode(mock_modbus_unit):
     assert boiler.circuit_b.max_temp == 42.0
 
 
+async def test_isystem_research_registers_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update(
+        {
+            604: 800,
+            610: 8,
+            661: 8,
+            668: 3,
+            669: 7,
+            670: 100,
+            671: 500,
+            677: 200,
+            678: 750,
+        }
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.sensors.smoke_temp == 80.0
+    assert boiler.sensors.water_pressure == 0.8
+    assert boiler.circuit_b.slope == 0.8
+    assert boiler.circuit_c.ambient_influence == 3
+    assert boiler.circuit_c.slope == 0.7
+    assert boiler.circuit_c.min_temp == 10.0
+    assert boiler.circuit_c.max_temp == 50.0
+    assert boiler.settings.boiler_min == 20.0
+    assert boiler.settings.boiler_max == 75.0
+
+
 async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):
     _seed(mock_modbus_unit)
     boiler = DiematicISystem(mock_modbus_unit)

@@ -12,7 +12,9 @@ sheet and ngraziano/isystem-to-mqtt, which names each block program P4. Circuit
 ambient influence (654, 660), circuit B min and max (662, 663) and circuit B
 supply temperature (605) come from ngraziano and were confirmed live against the
 matching base page values. The external frost threshold has no iSystem register
-and stays base-only.
+and stays base-only. Smoke 604, pressure 610, boiler min and max 677/678, circuit
+B slope 661, and the circuit C block 668-671 come from ngraziano-go and
+45clouds/diematic2mqtt, confirmed live on the boiler.
 """
 
 from __future__ import annotations
@@ -87,6 +89,8 @@ class Sensors(ISystemComponent):
     outlet_temp = float10(621, unit="°C")
     ionization_current = float10(608, unit="µA")
     fan_speed = integer(609, signed=False, nan=0xFFFF, unit="rpm")
+    smoke_temp = float10(604, unit="°C")
+    water_pressure = float10(610, unit="bar")
     burner_on = bit(427, 3)
     hot_water_pump_on = bit(427, 5)
     alarm = fault_code(465, MODULENS_FAULTS)
@@ -127,6 +131,7 @@ class CircuitB(ISystemComponent):
     program = time_program(232)
     pump_on = bit(428, 4)
     ambient_influence = integer(660, signed=False)
+    slope = float10(661, unit="K/K")
     min_temp = float10(662, unit="°C")
     max_temp = float10(663, unit="°C")
     day_target = float10(656, writable=_ZONE_DAY, force_fc16=True, unit="°C")
@@ -143,6 +148,10 @@ class CircuitC(ISystemComponent):
     room_temp = float10(618, unit="°C")
     calc_temp = float10(619, unit="°C")
     program = time_program(233)
+    ambient_influence = integer(668, signed=False)
+    slope = float10(669, unit="K/K")
+    min_temp = float10(670, unit="°C")
+    max_temp = float10(671, unit="°C")
     day_target = float10(664, writable=_ZONE_DAY, force_fc16=True, unit="°C")
     night_target = float10(665, writable=_ZONE_DAY, force_fc16=True, unit="°C")
     antifreeze_target = float10(666, writable=_ZONE_FROST, force_fc16=True, unit="°C")
@@ -217,9 +226,11 @@ class Schedules:
 
 
 class Settings(ISystemComponent):
-    """Writable boiler-level configuration in the iSystem layout."""
+    """Boiler-level configuration in the iSystem layout."""
 
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
+    boiler_min = float10(677, unit="°C")
+    boiler_max = float10(678, unit="°C")
 
 
 class Identity(ISystemComponent):
