@@ -62,7 +62,6 @@ class Diematic(_Regulator):
 
     async def set_clock(self, moment: datetime) -> None:
         """Set the regulator clock from ``moment``."""
-        # Each clock register needs the 0xFF00 write marker in its high byte.
         time_block = [
             _CLOCK_FLAG | (moment.hour & 0xFF),
             _CLOCK_FLAG | (moment.minute & 0xFF),

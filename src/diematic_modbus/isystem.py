@@ -28,7 +28,6 @@ _MODE_B_ISYSTEM = 659
 _MODE_C_ISYSTEM = 667
 _CLOCK_BASE = 679
 
-# Keep pooled reads within these windows to avoid unsupported register gaps.
 ISYSTEM_WINDOWS = (
     (8, 8),
     (231, 233),
@@ -104,7 +103,6 @@ class HotWater(ISystemComponent):
 
     temp = float10(603, unit="°C")
     bottom_temp = float10(623, unit="°C")
-    # Requested hot-water mode shares circuit B's register, not active-mode 640.
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
@@ -166,7 +164,6 @@ class CircuitC(ISystemComponent):
 class WeekProgram(Component):
     """One weekly comfort program read as seven separate three-register days."""
 
-    # Longer schedule reads return a different internal layout.
     register_ranges = _DAY_WINDOWS
 
     monday = schedule_day(0, writable=True)

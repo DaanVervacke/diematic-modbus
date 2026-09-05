@@ -9,7 +9,6 @@ from .faults import MODULENS_FAULTS
 from .fields import code_map, fault_code, float10, masked_enum, snap_clamp
 from .models import MODEL_CODES
 
-# Keep pooled reads within these windows to avoid unsupported register gaps.
 HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472))
 
 _HOT_WATER = snap_clamp(1.0, 10.0, 80.0)

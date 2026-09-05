@@ -142,5 +142,4 @@ MODULENS_FAULTS: dict[int, str] = {
     0x201C: "L254:DEF.INCONNU",
 }
 
-# Register 465 can return leftover response data, including this no-fault code.
 NO_FAULT = 0xFFFF

@@ -18,7 +18,6 @@ _PROGRAMS = 4
 
 _SIGN_BIT = 0x8000
 _MAGNITUDE = 0x7FFF
-# Both values mean an absent sensor rather than a negative reading.
 _NO_SENSOR = frozenset((0xFFFF, 0x8CCC))
 
 
@@ -166,7 +165,6 @@ class _TimeProgram:
     def __call__(self, raw: int) -> int | None:
         if raw in _NO_SENSOR:
             return None
-        # The low byte indexes seven days per program across four programs.
         return (raw & 0xFF) // _DAYS % _PROGRAMS + 1
 
 

@@ -133,15 +133,12 @@ class _Regulator:
                 )
         else:
             HotWaterMode(code)
-        # Heating and hot-water modes share a register, so preserve the other bits.
         (current,) = await self._unit.read_holding_registers(address, 1)
         await self._unit.write_registers(address, [(current & ~mask) | code])
         if self._nudges_panel and self.variant is DiematicVariant.DIEMATIC_4:
             await self._nudge_panel()
 
     async def _nudge_panel(self) -> None:
-        # Only base-layout Diematic 4 uses this refresh. Broader testing is needed.
-        # Register 13 returns unrelated data when read, so do not read it back.
         await self._unit.write_registers(_ANTIFREEZE_DAYS, [1])
         await asyncio.sleep(0.5)
         await self._unit.write_registers(_ANTIFREEZE_DAYS, [0])
