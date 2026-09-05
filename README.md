@@ -40,6 +40,8 @@ class here.
 | `circuit_b` | yes | yes | same as circuit A, plus supply temperature, slope, and circuit min and max temperature | day, night and frost target, plus slope on `Diematic` |
 | `circuit_c` | no | yes | room and calculated temperature, selected program, ambient sensor influence, slope, and circuit min and max temperature. No mode register exists for circuit C | day, night and frost target |
 | `settings` | yes | yes | external frost threshold on `Diematic`, boiler min and max on `DiematicISystem` | summer to winter threshold, plus boiler min and max on `Diematic` |
+| `config` | no | yes | installer tuning parameters (heating curve calibration, footprints, anticipation, zone types, bandwidth, timings, language). Read once, then cached | no |
+| `diagnostics` | no | yes | boiler active mode, PCU state, boiler state word, system input and auxiliary type, all as raw codes | no |
 | `identity` | yes | yes | boiler type code, controller or software version, clock | no |
 | `schedules` | no | yes | program P4 of each heating circuit, the hot water program, the auxiliary program. Read once, then cached | no |
 

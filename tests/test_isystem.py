@@ -96,6 +96,40 @@ async def test_isystem_research_registers_decode(mock_modbus_unit):
     assert boiler.settings.boiler_max == 75.0
 
 
+async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update(
+        {
+            263: 5,
+            266: 120,
+            276: 0x8010,
+            289: 350,
+            291: 150,
+            296: 1,
+            298: 300,
+            305: 5200,
+            473: 1,
+            644: 5,
+            712: 255,
+            744: 3,
+        }
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.config.language == 5
+    assert boiler.config.bandwidth == 12.0
+    assert boiler.config.zone_b_calibration == -1.6
+    assert boiler.config.footprint_a_day == 35.0
+    assert boiler.config.footprint_b_day is None
+    assert boiler.config.zone_a_type == 1
+    assert boiler.config.zone_a_min == 30.0
+    assert boiler.config.max_fan_speed == 5200
+    assert boiler.config.modulated_power == 1
+    assert boiler.diagnostics.boiler_active_mode == 5
+    assert boiler.diagnostics.pcu_block == 255
+    assert boiler.diagnostics.zone_aux_type == 3
+
+
 async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):
     _seed(mock_modbus_unit)
     boiler = DiematicISystem(mock_modbus_unit)

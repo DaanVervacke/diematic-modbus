@@ -41,11 +41,14 @@ ISYSTEM_WINDOWS = (
     (8, 8),
     (17, 26),
     (231, 233),
-    (427, 428),
-    (457, 457),
-    (465, 465),
+    (247, 252),
+    (263, 299),
+    (305, 360),
+    (426, 474),
     (600, 625),
+    (644, 644),
     (650, 685),
+    (707, 744),
 )
 
 SCHEDULE_BASES = {
@@ -64,7 +67,7 @@ _DAY_WINDOWS = tuple(
 
 _HEATING_MASK = 0x2F
 _HOT_WATER_MASK = 0x50
-_READ_ONCE = frozenset(f"schedules.{name}" for name in SCHEDULE_BASES)
+_READ_ONCE = frozenset(f"schedules.{name}" for name in SCHEDULE_BASES) | {"config"}
 
 _ZONE_DAY = snap_clamp(0.5, 10.0, 30.0)
 _ZONE_FROST = snap_clamp(0.5, 3.0, 20.0)
@@ -233,6 +236,67 @@ class Settings(ISystemComponent):
     boiler_max = float10(678, unit="°C")
 
 
+class Config(ISystemComponent):
+    """Installer tuning parameters in the iSystem layout, read once.
+
+    Addresses and scales come from ngraziano-go and 45clouds/diematic2mqtt,
+    confirmed live. Anticipation uses a 101 no-value code and footprint a 150 one.
+    """
+
+    autoadapt_a = float10(247)
+    autoadapt_b = float10(248)
+    autoadapt_c = float10(249)
+    language = integer(263, signed=False)
+    building_inertia = integer(264, signed=False)
+    bandwidth = float10(266)
+    three_way_valve_shift = float10(267)
+    min_running_time = integer(269, signed=False)
+    burner_temporisation = integer(271, signed=False)
+    pump_postrun = integer(272, signed=False)
+    outside_calibration = float10(274, unit="°C")
+    zone_a_calibration = float10(275, unit="°C")
+    zone_b_calibration = float10(276, unit="°C")
+    zone_c_calibration = float10(277, unit="°C")
+    anticipation_a = float10(282, none_values=(101,))
+    anticipation_b = float10(283, none_values=(101,))
+    anticipation_c = float10(284, none_values=(101,))
+    footprint_a_day = float10(289, none_values=(150,))
+    footprint_a_night = float10(290, none_values=(150,))
+    footprint_b_day = float10(291, none_values=(150,))
+    footprint_b_night = float10(292, none_values=(150,))
+    footprint_c_day = float10(358, none_values=(150,))
+    footprint_c_night = float10(359, none_values=(150,))
+    zone_a_type = integer(296, signed=False)
+    zone_b_type = integer(297, signed=False)
+    zone_c_type = integer(360, signed=False)
+    zone_a_min = float10(298, unit="°C")
+    zone_a_max = float10(299, unit="°C")
+    max_fan_speed = integer(305, signed=False, nan=0xFFFF, unit="rpm")
+    three_way_valve_temp_shift = float10(426, unit="°C")
+    calc_setpoint = float10(436, unit="°C")
+    three_way_valve_bandwidth = float10(438)
+    modulated_power = integer(473, signed=False, unit="%")
+    output_state = integer(474, signed=False)
+
+
+class Diagnostics(ISystemComponent):
+    """Boiler state and diagnostic registers in the iSystem layout.
+
+    State words are exposed as raw codes. Addresses from ngraziano-go and
+    45clouds/diematic2mqtt, confirmed live.
+    """
+
+    boiler_active_mode = integer(644, signed=False)
+    dhw_priority = integer(674, signed=False)
+    pcu_state = integer(710, signed=False)
+    pcu_substate = integer(711, signed=False)
+    pcu_block = integer(712, signed=False)
+    pcu_lock = integer(713, signed=False)
+    boiler_state = integer(735, signed=False)
+    system_input_state = integer(741, signed=False)
+    zone_aux_type = integer(744, signed=False)
+
+
 class Identity(ISystemComponent):
     """Regulator identity and clock registers in the iSystem layout."""
 
@@ -270,6 +334,8 @@ class DiematicISystem(_Regulator):
         self.circuit_c = CircuitC(unit)
         self.schedules = Schedules(unit)
         self.settings = Settings(unit)
+        self.config = Config(unit)
+        self.diagnostics = Diagnostics(unit)
         self.identity = Identity(unit)
         self._install_engine(
             unit,
@@ -280,6 +346,8 @@ class DiematicISystem(_Regulator):
                 "circuit_b": self.circuit_b,
                 "circuit_c": self.circuit_c,
                 "settings": self.settings,
+                "config": self.config,
+                "diagnostics": self.diagnostics,
                 "identity": self.identity,
                 **{
                     f"schedules.{name}": program

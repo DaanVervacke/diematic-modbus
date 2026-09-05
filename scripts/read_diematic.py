@@ -53,6 +53,8 @@ _ISYSTEM_BUNDLES = (
     "circuit_b",
     "circuit_c",
     "settings",
+    "config",
+    "diagnostics",
     "identity",
 )
 

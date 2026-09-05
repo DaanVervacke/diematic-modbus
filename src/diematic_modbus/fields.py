@@ -26,10 +26,12 @@ _NO_SENSOR = frozenset((0xFFFF, 0x8CCC))
 class Float10Field(RegisterField[float]):
     """A register in tenths of a unit with sign-magnitude negatives."""
 
+    none_values: tuple[int, ...] = ()
+
     def decode(self, words: list[int], scale_exponent: int | None = None) -> Any:
         """Decode a tenths register, mapping absent-sensor sentinels to None."""
         raw = words[0]
-        if raw in _NO_SENSOR:
+        if raw in _NO_SENSOR or raw in self.none_values:
             return None
         return -(raw & _MAGNITUDE) / 10 if raw >= _SIGN_BIT else raw / 10
 
@@ -47,9 +49,16 @@ def float10(
     writable: bool | WriteValidator = False,
     force_fc16: bool = False,
     unit: str | None = None,
+    none_values: tuple[int, ...] = (),
 ) -> Float10Field:
-    """Return a signed tenths register where an absent-sensor sentinel means None."""
-    return Float10Field(address, writable=writable, force_fc16=force_fc16, unit=unit)
+    """Return a signed tenths register where an absent-sensor sentinel means None.
+
+    ``none_values`` adds register-specific no-value codes such as 101 for
+    anticipation and 150 for footprint, on top of the shared 0xFFFF and 0x8CCC.
+    """
+    field = Float10Field(address, writable=writable, force_fc16=force_fc16, unit=unit)
+    field.none_values = none_values
+    return field
 
 
 class _MaskedEnum[E: IntEnum]:
