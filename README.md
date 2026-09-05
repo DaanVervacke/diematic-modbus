@@ -1,5 +1,7 @@
 # diematic-modbus
 
+[![CI](https://github.com/DaanVervacke/diematic-modbus/actions/workflows/ci.yml/badge.svg)](https://github.com/DaanVervacke/diematic-modbus/actions/workflows/ci.yml)
+
 Read temperatures, check what your heating is doing, and change supported
 settings on a De Dietrich Diematic boiler from Python.
 

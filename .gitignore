@@ -1,9 +1,11 @@
 __pycache__/
 *.py[cod]
+.DS_Store
 .venv/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.coverage
 dist/
 build/
 *.egg-info/

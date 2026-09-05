@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "diematic-modbus"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Read and control a De Dietrich Diematic heating regulator over Modbus"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,11 +23,22 @@ cli = ["modbus-connection[tmodbus]>=4.10.0,<5"]
 [project.urls]
 Homepage = "https://github.com/DaanVervacke/diematic-modbus"
 
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/diematic_modbus"]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.14", "mypy>=1.13"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.14",
+    "mypy>=1.13",
+    "coverage>=7",
+    "pip-audit>=2.7",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -52,3 +63,11 @@ strict = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 98
+show_missing = true
