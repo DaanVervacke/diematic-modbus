@@ -3,9 +3,14 @@
 A parallel layout for boilers whose firmware exposes the iSystem registers.
 Sensors and setpoints live in the iSystem address page (601 outdoor, 602 boiler
 and so on), with circuit C and per-circuit calculated setpoints that the low
-layout lacks. Circuit mode is read and written through the low registers 17 and
-26, which this boiler also answers, because the iSystem page has no writable
-mode register. Addresses and scales come from the iSystem map in
+layout lacks. Circuit mode is read and written through the iSystem derogation
+registers 653 (A), 659 (B) and 667 (C), confirmed live on the boiler: writes to
+659 and 667 land and the panel follows with no nudge, while 653 is rejected where
+circuit A is absent, the same way the low register 17 is. Hot-water mode rides
+bits 4 and 6 of those same registers (bit 16 comfort, bit 64 comfort until a
+time) and is driven through the writable circuit B register 659. The
+comfort-until end time is held inside the panel and is not exposed over Modbus.
+Addresses and scales come from the iSystem map in
 IgnacioHR/diematic_server and are verified live before writes are trusted. The
 schedule blocks and program selection registers follow the De Dietrich register
 sheet and ngraziano/isystem-to-mqtt, which names each block program P4. Circuit
@@ -22,7 +27,7 @@ from __future__ import annotations
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, bit, integer
 
-from ._base import _MODE_A, _MODE_B, _Regulator
+from ._base import _Regulator
 from .enums import ActiveMode, DiematicVariant, HeatingMode, HotWaterMode
 from .faults import MODULENS_FAULTS
 from .fields import (
@@ -37,9 +42,12 @@ from .fields import (
 )
 from .models import MODEL_CODES
 
+_MODE_A_ISYSTEM = 653
+_MODE_B_ISYSTEM = 659
+_MODE_C_ISYSTEM = 667
+
 ISYSTEM_WINDOWS = (
     (8, 8),
-    (17, 26),
     (231, 233),
     (247, 252),
     (263, 299),
@@ -104,7 +112,7 @@ class HotWater(ISystemComponent):
 
     temp = float10(603, unit="°C")
     bottom_temp = float10(623, unit="°C")
-    mode = masked_enum(_MODE_A, _HOT_WATER_MASK, HotWaterMode)
+    mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
     night_target = float10(673, writable=_DHW, force_fc16=True, unit="°C")
@@ -115,7 +123,7 @@ class CircuitA(ISystemComponent):
 
     room_temp = float10(614, unit="°C")
     calc_temp = float10(615, unit="°C")
-    mode = masked_enum(_MODE_A, _HEATING_MASK, HeatingMode)
+    mode = masked_enum(_MODE_A_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(637, 0x06, ActiveMode)
     program = time_program(231)
     pump_on = bit(427, 4)
@@ -132,7 +140,7 @@ class CircuitB(ISystemComponent):
     room_temp = float10(616, unit="°C")
     calc_temp = float10(617, unit="°C")
     supply_temp = float10(605, unit="°C")
-    mode = masked_enum(_MODE_B, _HEATING_MASK, HeatingMode)
+    mode = masked_enum(_MODE_B_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(638, 0x06, ActiveMode)
     program = time_program(232)
     pump_on = bit(428, 4)
@@ -148,11 +156,12 @@ class CircuitB(ISystemComponent):
 class CircuitC(ISystemComponent):
     """Heating circuit C readings and setpoints, present only in the iSystem layout.
 
-    The low bank has no circuit C, so this circuit exposes no mode register.
+    Mode rides the iSystem derogation register 667, confirmed writable live.
     """
 
     room_temp = float10(618, unit="°C")
     calc_temp = float10(619, unit="°C")
+    mode = masked_enum(_MODE_C_ISYSTEM, _HEATING_MASK, HeatingMode)
     program = time_program(233)
     active_mode = masked_enum(639, 0x06, ActiveMode)
     ambient_influence = integer(668, signed=False)
@@ -318,6 +327,11 @@ class Identity(ISystemComponent):
 class DiematicISystem(_Regulator):
     """A De Dietrich Diematic regulator addressed through the iSystem layout."""
 
+    _mode_a_addr = _MODE_A_ISYSTEM
+    _mode_b_addr = _MODE_B_ISYSTEM
+    _hot_water_addr = _MODE_B_ISYSTEM
+    _nudges_panel = False
+
     def __init__(
         self,
         unit: ModbusUnit,
@@ -376,3 +390,7 @@ class DiematicISystem(_Regulator):
     def circuit_c_present(self) -> bool:
         """Whether heating circuit C reports a room temperature."""
         return self._force_circuit_c or self.circuit_c.room_temp is not None
+
+    async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
+        """Set heating circuit C mode through the iSystem derogation register 667."""
+        await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, int(mode))

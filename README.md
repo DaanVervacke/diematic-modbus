@@ -10,9 +10,10 @@ and keep ownership of the socket. It has no Home Assistant imports.
 > Alpha. The register map comes from other people's reverse engineering,
 > cross-checked against the De Dietrich register sheet, and was tested on
 > the maintainer's own boiler, a Diematic iSystem that reports type code
-> `D4`. On that boiler reads, setpoint writes and circuit B mode writes
-> work. Circuit A and hot water mode writes are rejected because that
-> boiler has no circuit A, so they are unproven on a boiler that has one.
+> `D4`. On that boiler reads, setpoint writes, heating mode writes for
+> circuits B and C, and hot water mode writes work through the iSystem
+> registers. Circuit A mode writes are rejected because that boiler has no
+> circuit A, so they are unproven on a boiler that has one.
 > The clock write has never run against real hardware. See "Verified on
 > hardware". Use at your own risk.
 
@@ -38,7 +39,7 @@ class here.
 | `hot_water` | yes | yes | temperature, mode, current active mode on `DiematicISystem` | day and night target |
 | `circuit_a` | yes | yes | room and calculated temperature, mode, pump state, ambient sensor influence, plus selected program and current active mode on `DiematicISystem` | day, night and frost target, slope |
 | `circuit_b` | yes | yes | same as circuit A, plus supply temperature, slope, and circuit min and max temperature | day, night and frost target, plus slope on `Diematic` |
-| `circuit_c` | no | yes | room and calculated temperature, selected program, ambient sensor influence, slope, and circuit min and max temperature. No mode register exists for circuit C | day, night and frost target |
+| `circuit_c` | no | yes | room and calculated temperature, mode and current active mode, selected program, ambient sensor influence, slope, and circuit min and max temperature | day, night and frost target |
 | `settings` | yes | yes | external frost threshold on `Diematic`, boiler min and max on `DiematicISystem` | summer to winter threshold, plus boiler min and max on `Diematic` |
 | `config` | no | yes | installer tuning parameters (heating curve calibration, footprints, anticipation, zone types, bandwidth, timings, language). Read once, then cached | no |
 | `diagnostics` | no | yes | boiler active mode, PCU state, boiler state word, system input and auxiliary type, all as raw codes | no |
@@ -50,9 +51,10 @@ class here.
 | `async_update()` | yes | yes | refresh every bundle, return an `UpdateReport` |
 | `async_read_raw()` | yes | yes | dump every register the layout serves, undecoded |
 | `bundle.write(field, value)` | yes | yes | write one setpoint, snapped to the step the boiler accepts |
-| `set_circuit_a_mode(mode)` | yes | yes | write heating mode on register 17, no effect without circuit A |
-| `set_circuit_b_mode(mode)` | yes | yes | write heating mode on register 26 |
-| `set_hot_water_mode(mode)` | yes | yes | write hot water mode on register 17, no effect without circuit A |
+| `set_circuit_a_mode(mode)` | yes | yes | write heating circuit A mode. `Diematic` uses register 17, `DiematicISystem` register 653. No effect without circuit A |
+| `set_circuit_b_mode(mode)` | yes | yes | write heating circuit B mode. `Diematic` uses register 26, `DiematicISystem` register 659 |
+| `set_circuit_c_mode(mode)` | no | yes | write heating circuit C mode on register 667 |
+| `set_hot_water_mode(mode)` | yes | yes | write hot water mode. `Diematic` uses register 17, `DiematicISystem` the hot water bits of register 659. No effect where that register is rejected |
 | `set_clock(moment)` | yes | no | write the regulator clock, never run against real hardware |
 
 ## Install
@@ -107,9 +109,11 @@ override that detection.
 
 Setpoints write by field name and snap to the step the boiler accepts. Modes
 go through `set_*_mode` instead of a field write because each mode register
-also holds a second setting the library has to preserve. Circuit A mode and
-hot water mode share register 17, so a boiler without circuit A ignores
-writes to both.
+also holds a second setting the library has to preserve. On the base layout
+circuit A mode and hot water mode share register 17. On the iSystem layout
+heating mode and hot water mode share the derogation registers 653, 659 and
+667, and hot water rides the writable circuit B register 659. A boiler
+without circuit A ignores writes to its circuit A register.
 
 A value the boiler reports as absent decodes to `None`. A fault code the
 library does not know is returned as its raw integer so a fault is never
@@ -161,8 +165,10 @@ uv run scripts/read_diematic.py 192.168.1.50 --port 502 --unit 10 --variant 3 --
 - The first argument is the gateway IP, or the serial device with
   `--transport serial /dev/ttyUSB0`.
 - `--unit` is the Modbus address of the console, 10 unless you changed it.
-- `--variant 3` or `--variant 4` only affects mode writes (a Diematic 4 needs
-  a panel refresh afterwards). It does not matter for a read-only run.
+- `--variant 3` or `--variant 4` only affects base layout mode writes (a
+  Diematic 4 base console needs a panel refresh afterwards). The iSystem
+  layout writes its mode registers directly with no refresh. It does not
+  matter for a read-only run.
 - `--layout both` dumps the base page and then the iSystem page. If you know
   your console is not an iSystem, use `--layout base`. Only an iSystem has
   been tested, so what a Diematic 3 or 4 prints for the iSystem page is
@@ -194,8 +200,10 @@ original value afterwards. Treat anything not in this table as unverified.
 | --- | --- |
 | Reading sensors, hot water, and circuit values | Works, on both layouts |
 | Setpoint writes (day, night, frost targets, slope, summer to winter threshold) | Works |
-| Circuit B mode write | Works |
-| Circuit A mode write, hot water mode write | Rejected on the maintainer's boiler, which has no circuit A. Untested on a boiler that has circuit A |
+| Circuit B and C mode write (iSystem registers 659 and 667) | Works, the panel follows with no nudge |
+| Hot water mode write (comfort or auto, iSystem register 659) | Works both directions. Comfort until a set time is panel only, the end time is not on Modbus |
+| Circuit A mode write | Rejected on the maintainer's boiler, which has no circuit A. Untested on a boiler that has circuit A |
+| Holiday mode | Reads as value 33 in the zone mode registers, forcing every circuit and hot water to antifreeze |
 | Weekly schedules and the active program (reading) | Works, matches the console |
 | Program selection (choosing a different program) | Not possible, the maintainer's boiler rejects every write tried |
 | Setting the clock | Implemented, but never run against a real boiler |
@@ -208,10 +216,13 @@ original value afterwards. Treat anything not in this table as unverified.
 
 - The boiler only accepts function code 16 for writes, function code 6
   times out.
-- Circuit B mode writes go through register 26. Circuit A and hot water
-  mode share register 17, and on the maintainer's boiler, which has no
-  circuit A, a write there reverts on the next read regardless of the
-  Diematic 4 panel refresh.
+- On the iSystem layout, heating mode writes go through the derogation
+  registers 653 for circuit A, 659 for circuit B and 667 for circuit C. Hot
+  water mode rides bits 4 and 6 of those registers, driven through the
+  writable 659, where bit 16 is comfort and bit 64 is comfort until a time.
+  Register 653 and the base register 17 revert on the next read on this
+  boiler because it has no circuit A. The base layout uses registers 26 and
+  17, and a Diematic 4 there needs the panel refresh.
 - Editing program P4 of circuit B on the console changed the matching
   registers within seconds and left circuits A and C alone. The hot water
   program matched too. The auxiliary program has no console page to

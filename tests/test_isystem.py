@@ -2,14 +2,21 @@ from datetime import time
 
 from modbus_connection.mock import MockModbusUnit
 
-from diematic_modbus import ActiveMode, DiematicISystem, HeatingMode, HotWaterMode
+from diematic_modbus import (
+    ActiveMode,
+    DiematicISystem,
+    DiematicVariant,
+    HeatingMode,
+    HotWaterMode,
+)
 
 
 def _seed(unit: MockModbusUnit) -> None:
     unit.holding.update(
         {
             8: 190,
-            17: 0x58,
+            653: 0x08,
+            659: 0x58,
             427: 0x38,
             457: 24,
             465: 0xFFFF,
@@ -151,13 +158,37 @@ async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):
     assert boiler.circuit_c_present is True
 
 
-async def test_isystem_mode_writes_through_low_register(mock_modbus_unit):
-    mock_modbus_unit.holding[17] = 0x58
+async def test_isystem_heating_mode_writes_to_zone_b_register(mock_modbus_unit):
+    mock_modbus_unit.holding[659] = 0x58
     boiler = DiematicISystem(mock_modbus_unit)
-    await boiler.set_circuit_a_mode(HeatingMode.TEMP_DAY)
-    word = mock_modbus_unit.holding[17]
-    assert word & 0x2F == int(HeatingMode.TEMP_DAY)
+    await boiler.set_circuit_b_mode(HeatingMode.TEMP_NIGHT)
+    word = mock_modbus_unit.holding[659]
+    assert word & 0x2F == int(HeatingMode.TEMP_NIGHT)
     assert word & 0x50 == int(HotWaterMode.TEMP)
+    assert 17 not in mock_modbus_unit.holding
+    assert 26 not in mock_modbus_unit.holding
+
+
+async def test_isystem_hot_water_mode_writes_to_zone_b_register(mock_modbus_unit):
+    mock_modbus_unit.holding[659] = 0x08
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.set_hot_water_mode(HotWaterMode.PERM)
+    word = mock_modbus_unit.holding[659]
+    assert word & 0x50 == int(HotWaterMode.PERM)
+    assert word & 0x2F == int(HeatingMode.AUTO)
+
+
+async def test_isystem_circuit_c_mode_writes_to_667(mock_modbus_unit):
+    mock_modbus_unit.holding[667] = 0x08
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.set_circuit_c_mode(HeatingMode.TEMP_DAY)
+    assert mock_modbus_unit.holding[667] & 0x2F == int(HeatingMode.TEMP_DAY)
+
+
+async def test_isystem_mode_write_does_not_nudge_panel(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit, variant=DiematicVariant.DIEMATIC_4)
+    await boiler.set_circuit_b_mode(HeatingMode.AUTO)
+    assert 13 not in mock_modbus_unit.holding
 
 
 async def test_isystem_setpoint_snaps_and_writes(mock_modbus_unit):

@@ -34,6 +34,10 @@ class _Regulator:
     """Pooled polling, partial-failure reporting, and mode writes over a unit."""
 
     variant: DiematicVariant
+    _mode_a_addr: int = _MODE_A
+    _mode_b_addr: int = _MODE_B
+    _hot_water_addr: int = _MODE_A
+    _nudges_panel: bool = True
     _unit: ModbusUnit
     _bundles: dict[str, Component]
     _poll: list[Component]
@@ -109,21 +113,21 @@ class _Regulator:
         return await group.async_read_raw(notify=False)
 
     async def set_circuit_a_mode(self, mode: HeatingMode) -> None:
-        """Set circuit A mode on register 17, ignored where circuit A is absent."""
-        await self._write_mode(_MODE_A, _HEATING_MASK, int(mode))
+        """Set heating circuit A mode, ignored where circuit A is absent."""
+        await self._write_mode(self._mode_a_addr, _HEATING_MASK, int(mode))
 
     async def set_circuit_b_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit B mode through register 26."""
-        await self._write_mode(_MODE_B, _HEATING_MASK, int(mode))
+        """Set heating circuit B mode."""
+        await self._write_mode(self._mode_b_addr, _HEATING_MASK, int(mode))
 
     async def set_hot_water_mode(self, mode: HotWaterMode) -> None:
-        """Set hot-water mode on register 17, ignored where circuit A is absent."""
-        await self._write_mode(_MODE_A, _HOT_WATER_MASK, int(mode))
+        """Set hot-water mode, ignored where the target register is absent."""
+        await self._write_mode(self._hot_water_addr, _HOT_WATER_MASK, int(mode))
 
     async def _write_mode(self, address: int, mask: int, code: int) -> None:
         (current,) = await self._unit.read_holding_registers(address, 1)
         await self._unit.write_registers(address, [(current & ~mask) | code])
-        if self.variant is DiematicVariant.DIEMATIC_4:
+        if self._nudges_panel and self.variant is DiematicVariant.DIEMATIC_4:
             await self._nudge_panel()
 
     async def _nudge_panel(self) -> None:
