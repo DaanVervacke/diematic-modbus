@@ -421,6 +421,7 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Day, night and frost-protection targets | Every exposed circuit | `day_target`, `night_target`, `antifreeze_target` |
 | Requested heating mode | Every exposed circuit | `mode` |
 | Current day, night or frost-protection state | iSystem A/B/C | `active_mode` |
+| Whether the active override is permanent and whether it covers all circuits | iSystem A/B/C | `permanent_derogation`, `all_circuits_derogation` |
 | Selected heating program, P1 to P4 | iSystem A/B/C | `program` |
 | Heating pump status | A/B on both layouts, not C | `pump_on` |
 | Water supply temperature | B on both layouts | `supply_temp` |
@@ -447,7 +448,8 @@ restrictions. Writable values can also be read.
 | --- | --- | --- | --- |
 | Heating day/night target | A/B: 5 to 30 °C, 0.5 °C steps | A/B/C: 10 to 30 °C, 0.5 °C steps | `circuit_*.write("day_target", value)` or `"night_target"` |
 | Heating frost-protection target | A/B: 5 to 30 °C, 0.5 °C steps | A/B/C: 3 to 20 °C, 0.5 °C steps | `circuit_*.write("antifreeze_target", value)` |
-| Heating-curve slope | A/B: 0 to 4, 0.1 steps | A only: 0 to 4, 0.1 steps. B/C read-only | `circuit_*.write("slope", value)` |
+| Heating-curve slope | A/B: 0 to 4, 0.1 steps | A/B/C: 0 to 4, 0.1 steps | `circuit_*.write("slope", value)` |
+| Heating-circuit minimum/maximum flow temperature | Read-only | B/C: writable, no library range limit | `circuit_*.write("min_temp", value)` or `"max_temp"` |
 | Heating mode | A/B | A/B/C | `set_circuit_a_mode()`, `set_circuit_b_mode()`, `set_circuit_c_mode()` |
 | Hot-water day/night target | 10 to 80 °C, 1 °C steps | Same | `hot_water.write("day_target", value)` or `"night_target"` |
 | Hot-water mode | Yes | Yes | `set_hot_water_mode()` |
@@ -541,6 +543,7 @@ claim for every boiler with a similar panel.
 | --- | --- |
 | Boiler, hot-water and heating readings | Reads worked through both layouts. This does not verify every optional sensor |
 | Temperature targets, heating-curve slope and summer/winter threshold writes | Successful tests were recorded, with original values restored. There is no complete per-field, per-layout test matrix yet |
+| iSystem circuit B/C slope and min/max flow-temperature writes | Verified on 2026-09-05, each value read, changed and restored. Boiler minimum/maximum writes were refused on this unit, so those stay read-only |
 | iSystem circuit B/C heating modes | Writes to 659/667 worked and the panel followed without a refresh command |
 | iSystem hot-water automatic/comfort modes | Both directions worked through 659. Choosing an override end time remains panel-only |
 | Base-layout hot-water mode writes | Did not persist through register 17 on this installation. Use the iSystem result above as the tested path |
@@ -639,5 +642,8 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Further cross-checks of the iSystem map:
   [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
+- Override-state field names and schedule meaning: De Dietrich's own parameter
+  tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
+  and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).
 - Connection handling, register modelling and test-script helpers:
   [modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
