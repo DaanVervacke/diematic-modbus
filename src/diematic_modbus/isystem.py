@@ -325,7 +325,7 @@ class DiematicISystem(_Regulator):
 
     _mode_a_addr = _MODE_A_ISYSTEM
     _mode_b_addr = _MODE_B_ISYSTEM
-    _hot_water_addr = _MODE_B_ISYSTEM
+    _hot_water_addrs = (_MODE_B_ISYSTEM,)
     _nudges_panel = False
 
     def __init__(
@@ -389,7 +389,7 @@ class DiematicISystem(_Regulator):
 
     async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
         """Set heating circuit C mode; HOLIDAY is rejected as panel-only."""
-        await self._write_mode(_MODE_C_ISYSTEM, _HEATING_MASK, HeatingMode, mode)
+        await self._write_mode((_MODE_C_ISYSTEM,), _HEATING_MASK, HeatingMode, mode)
 
     async def set_clock(self, moment: datetime) -> None:
         """Set the regulator clock from ``moment``."""

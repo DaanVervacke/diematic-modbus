@@ -548,7 +548,7 @@ claim for every boiler with a similar panel.
 | iSystem circuit B/C slope and min/max flow-temperature writes | Verified on 2026-09-05, each value read, changed and restored. Boiler minimum/maximum writes were refused on this unit, so those stay read-only |
 | iSystem circuit B/C heating modes | Writes to 659/667 worked and the panel followed without a refresh command |
 | iSystem hot-water automatic/comfort modes | Both directions worked through 659. Choosing an override end time remains panel-only |
-| Base-layout hot-water mode writes | Did not persist through register 17 on this installation. Use the iSystem result above as the tested path |
+| Base-layout hot-water mode writes | Verified on 2026-09-07 through the library. The boiler mirrors the hot-water bits into registers 17 and 26 and rejects a write to 17 alone, so the base layout writes both together. Read original, set comfort, confirmed on the panel, restored |
 | Circuit A mode writes | Did not work on the installation without circuit A. Testing on an installation with A is still needed |
 | Circuit B P4 and hot-water schedules | Compared with the panel. Editing B's P4 changed the matching data without changing A/C |
 | Selected heating program | Circuit A's reported P1/P4/P2/P3 selections matched the panel |
@@ -584,9 +584,11 @@ single-value writes. Function code 6 timed out. Numeric writable fields use
 `force_fc16=True` for that reason.
 
 Mode changes preserve shared heating/hot-water bits. The base layout uses
-17 for A and hot water, and 26 for B. iSystem uses 653/659/667 for A/B/C, with
-hot water controlled through 659. Register 640 reports the current hot-water
-state, not its requested mode. Only base-layout Diematic 4 requests a panel
+17 for A and 26 for B, and mirrors the hot-water mode into both: the boiler
+rejects a hot-water write to 17 alone, so the base layout reads both, then
+writes both back with each register's own heating bits preserved. iSystem uses
+653/659/667 for A/B/C, with hot water controlled through 659 only. Register 640
+reports the current hot-water state, not its requested mode. Only base-layout Diematic 4 requests a panel
 refresh. Never read refresh register 13 back: on the test boiler it returned
 the first word of the previous response.
 
