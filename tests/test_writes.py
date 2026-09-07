@@ -133,6 +133,47 @@ async def test_setting_hot_water_mode_preserves_heating_bits(mock_modbus_unit):
     assert word & 0x2F == int(HeatingMode.AUTO)
 
 
+async def test_base_hot_water_mode_mirrors_into_registers_17_and_26(mock_modbus_unit):
+    mock_modbus_unit.holding[17] = 0x01
+    mock_modbus_unit.holding[26] = 0x08
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.set_hot_water_mode(HotWaterMode.PERM)
+    assert mock_modbus_unit.holding[17] & 0x50 == int(HotWaterMode.PERM)
+    assert mock_modbus_unit.holding[26] & 0x50 == int(HotWaterMode.PERM)
+    assert mock_modbus_unit.holding[17] & 0x2F == 0x01
+    assert mock_modbus_unit.holding[26] & 0x2F == 0x08
+
+
+async def test_base_hot_water_mode_reads_both_before_writing_either(mock_modbus_unit):
+    mock_modbus_unit.holding[17] = 0x01
+    mock_modbus_unit.holding[26] = 0x08
+    reads_seen_at_first_write: list[int] = []
+    writes: list[int] = []
+
+    def record(event):
+        if not writes:
+            reads_seen_at_first_write.extend(
+                e.address for e in mock_modbus_unit.read_events
+            )
+        writes.append(event.address)
+
+    mock_modbus_unit.on_write(record)
+    diematic = Diematic(mock_modbus_unit, variant=DiematicVariant.DIEMATIC_3)
+    await diematic.set_hot_water_mode(HotWaterMode.PERM)
+    assert reads_seen_at_first_write == [17, 26]
+    assert writes == [17, 26]
+
+
+async def test_isystem_hot_water_mode_writes_single_register(mock_modbus_unit):
+    mock_modbus_unit.holding[659] = 0x08
+    boiler = DiematicISystem(mock_modbus_unit)
+    writes: list[int] = []
+    mock_modbus_unit.on_write(lambda e: writes.append(e.address))
+    await boiler.set_hot_water_mode(HotWaterMode.PERM)
+    assert writes == [659]
+    assert mock_modbus_unit.holding[659] & 0x50 == int(HotWaterMode.PERM)
+
+
 async def test_isystem_circuit_slope_writes_and_clamps(mock_modbus_unit):
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.circuit_b.write("slope", 0.9)

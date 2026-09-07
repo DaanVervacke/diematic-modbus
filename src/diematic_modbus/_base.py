@@ -37,7 +37,7 @@ class _Regulator:
     variant: DiematicVariant
     _mode_a_addr: int = _MODE_A
     _mode_b_addr: int = _MODE_B
-    _hot_water_addr: int = _MODE_A
+    _hot_water_addrs: tuple[int, ...] = (_MODE_A, _MODE_B)
     _nudges_panel: bool = True
     _unit: ModbusUnit
     _bundles: dict[str, Component]
@@ -115,27 +115,32 @@ class _Regulator:
 
     async def set_circuit_a_mode(self, mode: HeatingMode) -> None:
         """Set heating circuit A mode, rejecting HOLIDAY as panel-only."""
-        await self._write_mode(self._mode_a_addr, _HEATING_MASK, HeatingMode, mode)
+        await self._write_mode((self._mode_a_addr,), _HEATING_MASK, HeatingMode, mode)
 
     async def set_circuit_b_mode(self, mode: HeatingMode) -> None:
         """Set heating circuit B mode, rejecting HOLIDAY as panel-only."""
-        await self._write_mode(self._mode_b_addr, _HEATING_MASK, HeatingMode, mode)
+        await self._write_mode((self._mode_b_addr,), _HEATING_MASK, HeatingMode, mode)
 
     async def set_hot_water_mode(self, mode: HotWaterMode) -> None:
-        """Set hot-water mode while preserving the shared heating-mode bits."""
+        """Set hot-water mode across its layout's registers, preserving heating bits."""
         await self._write_mode(
-            self._hot_water_addr, _HOT_WATER_MASK, HotWaterMode, mode
+            self._hot_water_addrs, _HOT_WATER_MASK, HotWaterMode, mode
         )
 
     async def _write_mode(
-        self, address: int, mask: int, enum: type[IntEnum], mode: int
+        self, addresses: tuple[int, ...], mask: int, enum: type[IntEnum], mode: int
     ) -> None:
+        """Validate a mode, then read every target register and write them together."""
         validated = enum(mode)
         if validated is HeatingMode.HOLIDAY:
             raise ValueError("Holiday mode is read-only. Set it on the control panel.")
         code = int(validated)
-        (current,) = await self._unit.read_holding_registers(address, 1)
-        await self._unit.write_registers(address, [(current & ~mask) | code])
+        currents: list[int] = []
+        for address in addresses:
+            (current,) = await self._unit.read_holding_registers(address, 1)
+            currents.append(current)
+        for address, current in zip(addresses, currents, strict=True):
+            await self._unit.write_registers(address, [(current & ~mask) | code])
         if self._nudges_panel and self.variant is DiematicVariant.DIEMATIC_4:
             await self._nudge_panel()
 
