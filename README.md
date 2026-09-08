@@ -649,5 +649,9 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Override-state field names and schedule meaning: De Dietrich's own parameter
   tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
   and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).
+- Independent confirmation of the heating-mode values and the hot-water
+  derogation mask:
+  [the De Dietrich Diematic iSystem thread on domotique-fibaro](https://www.domotique-fibaro.fr/topic/5677-de-dietrich-diematic-isystem/)
+  (topic 5677).
 - Connection handling, register modelling and test-script helpers:
   [modbus-connection](https://github.com/home-assistant-libs/modbus-connection).
