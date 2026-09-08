@@ -29,6 +29,7 @@ class Sensors(DiematicComponent):
     outdoor_temp = float10(7, unit="°C")
     outdoor_temp_bus = float10(470, unit="°C")
     boiler_temp = float10(75, unit="°C")
+    boiler_temp_dpsm = float10(452, unit="°C")
     calc_boiler_temp = float10(462, unit="°C")
     return_temp = float10(453, unit="°C")
     smoke_temp = float10(454, unit="°C")
