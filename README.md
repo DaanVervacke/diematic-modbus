@@ -393,6 +393,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
 | Reading labelled outlet temperature, sensor location unverified | iSystem | `sensors.outlet_temp` |
 | Additional outdoor reading from the boiler bus | Base | `sensors.outdoor_temp_bus` |
+| Additional boiler temperature from the DPSM module | Base | `sensors.boiler_temp_dpsm` |
 | Water pressure (bar), fan speed (rpm), flame-sensing current (µA) | Both | `sensors.water_pressure`, `fan_speed`, `ionization_current` |
 | Burner and hot-water pump status | Both | `sensors.burner_on`, `hot_water_pump_on` |
 | Reported pump output (%) | Base | `sensors.pump_power` |

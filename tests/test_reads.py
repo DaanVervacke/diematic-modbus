@@ -129,6 +129,13 @@ async def test_smoke_temp_out_of_range_reads_none(mock_modbus_unit):
     assert diematic.sensors.smoke_temp == 80.0
 
 
+async def test_dpsm_boiler_temp_decodes(mock_modbus_unit):
+    mock_modbus_unit.holding[452] = 281
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.async_update()
+    assert diematic.sensors.boiler_temp_dpsm == 28.1
+
+
 async def test_circuit_presence_follows_room_temp(mock_modbus_unit):
     _seed(mock_modbus_unit)
     diematic = Diematic(mock_modbus_unit)
