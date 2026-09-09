@@ -17,7 +17,7 @@ you can help check compatibility with your boiler without writing Python.
 > does not mean it has been verified on your boiler. Start with a read-only
 > test before trying any changes.
 
-## What it does
+## Features
 
 | Feature | Read | Change |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ to the panel's temperature settings, not necessarily the time of day.
 - [Hardware testing so far](#hardware-testing-so-far): see what has actually
   been tried, rather than just implemented.
 
-## Which systems are covered?
+## Supported systems
 
 The library implements two ways of addressing the boiler's data. These are
 called *register layouts*: a register is a numbered place where the
@@ -188,8 +188,8 @@ Open an issue in this repository with:
 - Your adapter or gateway model, its connection settings, and the command
   used. Replace private addresses or device paths if you prefer.
 - The script output, with `--debug` output and any traceback when a read fails.
-- A few specific comparisons, such as “circuit B night target: panel 17 °C,
-  script 17.0 °C,” plus any differences. Say what you could not check.
+- A few specific comparisons, such as "circuit B night target: panel 17 °C,
+  script 17.0 °C," plus any differences. Say what you could not check.
 - The code version you ran. `git rev-parse HEAD` gives the commit if you
   cloned the repository. For a downloaded archive, give its branch/tag and date.
 
@@ -517,7 +517,7 @@ as numbers rather than inventing an explanation.
 | Minimum running time, burner delay and pump run-on settings, without defined time units | `min_running_time`, `burner_temporisation`, `pump_postrun` |
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
 | A/B/C anticipation settings, without defined units | `anticipation_a`, `anticipation_b`, `anticipation_c` |
-| Day/night values labelled “footprint” in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
+| Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
 | A/B/C circuit type codes | `zone_a_type`, `zone_b_type`, `zone_c_type` |
 | Circuit A minimum/maximum temperatures (°C) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
 | Mixing-valve temperature adjustment (°C) and bandwidth | `three_way_valve_temp_shift`, `three_way_valve_bandwidth` |
