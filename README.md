@@ -62,11 +62,13 @@ contains everything the other does. For example, the base layout includes
 solar temperatures and power readings that the iSystem class does not.
 Diematic Delta is not supported.
 
-The library can detect the register layout with `async_probe()`. It reads the
+The library can detect the register layout with `async_detect()` or
+`async_probe()`. It reads the
 base identity registers and the iSystem identity registers independently. A
 known D3 or m3 code selects the base D3 variant, a known D4 code selects the
 base D4 variant, and a responding iSystem identity block selects
-`DiematicISystem`. An unknown device code raises `UnsupportedDiematicError`.
+`DiematicISystem`. An unknown device code raises `DiematicProbeError` with the
+probe evidence attached.
 Transport and device errors are raised as Modbus errors.
 
 The reported type code, such as `D4`, does not reliably identify the physical
@@ -247,8 +249,8 @@ start background polling. It has no Home Assistant dependency.
 
 ### Detect the layout
 
-Use `async_probe()` when the controller layout is unknown. It returns a ready
-`Diematic` or `DiematicISystem` object over the unit you provide:
+Use `async_probe()` when you only need a ready `Diematic` or
+`DiematicISystem` object:
 
 ```python
 from diematic_modbus import async_probe
@@ -256,6 +258,11 @@ from diematic_modbus import async_probe
 boiler = await async_probe(conn.for_unit(10))
 await boiler.async_update()
 ```
+
+Use `async_detect()` when you also need the raw type code, selected variant,
+layout, raw identity words, or probe errors. Its result keeps the base and
+iSystem probe blocks separate. Failed detection raises `DiematicProbeError`
+with the partial result attached as `.detection`.
 
 The base identity probe reads registers `3-6`, `108-110`, and `457`. The
 iSystem identity probe reads `600` and `679-684`. Unsupported address and
