@@ -417,7 +417,8 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | --- | --- | --- |
 | Outdoor, boiler, return-water and flue-gas temperatures | Both | `sensors.outdoor_temp`, `boiler_temp`, `return_temp`, `smoke_temp` |
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
-| Reading labelled outlet temperature, sensor location unverified | iSystem | `sensors.outlet_temp` |
+| Circuit A supply temperature | iSystem | `circuit_a.supply_temp` |
+| Auxiliary 1, auxiliary 2 and universal input temperatures | iSystem | `sensors.auxiliary_1_temp`, `sensors.auxiliary_2_temp`, `sensors.universal_temp` |
 | Additional outdoor reading from the boiler bus | Base | `sensors.outdoor_temp_bus` |
 | Additional boiler temperature from the DPSM module | Base | `sensors.boiler_temp_dpsm` |
 | Water pressure (bar), fan speed (rpm), flame-sensing current (µA) | Both | `sensors.water_pressure`, `fan_speed`, `ionization_current` |
@@ -426,6 +427,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Instantaneous and average power (kW) | Base | `sensors.instant_power`, `average_power` |
 | Solar and solar-tank temperatures | Base | `sensors.solar_temp`, `solar_tank_temp` |
 | Fault label or unknown fault number | Both | `sensors.alarm` |
+| Raw sensor-fault bitmap | Base | `sensors.sensor_faults` |
 
 Fault readings are not reliable on the test iSystem installation: register
 465 can return data left over from a previous reply, producing either a
@@ -460,7 +462,6 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Circuit A minimum/maximum temperatures | iSystem, cached | `config.zone_a_min`, `config.zone_a_max` |
 | Hot-water temperature, requested mode and day/night targets | Both | `hot_water.temp`, `mode`, `day_target`, `night_target` |
 | Additional hot-water temperature from the DPSM module | Base | `hot_water.temp_dpsm` |
-| Reading labelled bottom-of-tank temperature, meaning unverified | iSystem | `hot_water.bottom_temp` |
 | Current hot-water operating state | iSystem | `hot_water.active_mode` |
 
 The heating curve describes how the controller adjusts heating temperature
@@ -627,8 +628,8 @@ from the Sofrel S500 Tableau D1 OPTIONS B&C row and the Delta P4 address map.
 - Reading an installer or diagnostic number successfully does not confirm
   its physical meaning, scale, or unit. Panel comparisons are still needed.
 - The complete iSystem `metingen` page on the test panel had no entries matching
-  the unverified `outlet_temp` and `bottom_temp` fields. Their register meanings
-  remain unconfirmed on this installation.
+  the optional auxiliary temperatures or Circuit A supply temperature. Those
+  sensors are unavailable on this installation.
 - There is no fault-reset command or automatic discovery of fitted circuits
   and modules. Schedules are writable one day at a time, but there is no
   program-selection control.

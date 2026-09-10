@@ -26,6 +26,9 @@ def _seed(unit: MockModbusUnit) -> None:
             601: 205,
             602: 650,
             603: 500,
+            622: 100,
+            623: 110,
+            624: 120,
             607: 0xFFFF,
             609: 3000,
             614: 210,
@@ -48,6 +51,9 @@ async def test_isystem_reads_decode_across_bundles(mock_modbus_unit):
     assert boiler.sensors.boiler_temp == 65.0
     assert boiler.sensors.return_temp is None
     assert boiler.sensors.fan_speed == 3000
+    assert boiler.sensors.auxiliary_1_temp == 10.0
+    assert boiler.sensors.auxiliary_2_temp == 11.0
+    assert boiler.sensors.universal_temp == 12.0
     assert boiler.sensors.burner_on is True
     assert boiler.sensors.hot_water_pump_on is True
     assert boiler.sensors.alarm is None

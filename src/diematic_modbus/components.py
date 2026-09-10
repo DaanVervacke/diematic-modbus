@@ -44,6 +44,7 @@ class Sensors(DiematicComponent):
     burner_on = bit(427, 3)
     hot_water_pump_on = bit(427, 5)
     alarm = fault_code(465, MODULENS_FAULTS)
+    sensor_faults = integer(116, signed=False, nan=0xFFFF)
 
 
 class HotWater(DiematicComponent):

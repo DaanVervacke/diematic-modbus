@@ -27,6 +27,7 @@ def _seed(unit: MockModbusUnit) -> None:
             462: 700,
             463: 42,
             465: 0xFFFF,
+            116: 0x0005,
             467: 0x8000 | 120,
             470: 195,
             471: 250,
@@ -48,6 +49,7 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.sensors.burner_on is True
     assert diematic.sensors.hot_water_pump_on is True
     assert diematic.sensors.alarm is None
+    assert diematic.sensors.sensor_faults == 5
 
     assert diematic.hot_water.temp == 50.0
     assert diematic.hot_water.temp_dpsm == 50.5

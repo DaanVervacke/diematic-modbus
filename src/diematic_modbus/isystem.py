@@ -102,7 +102,9 @@ class Sensors(ISystemComponent):
     boiler_temp = float10(602, unit="°C")
     calc_boiler_temp = float10(620, unit="°C")
     return_temp = float10(607, unit="°C")
-    outlet_temp = float10(621, unit="°C")
+    auxiliary_1_temp = float10(622, unit="°C")
+    auxiliary_2_temp = float10(623, unit="°C")
+    universal_temp = float10(624, unit="°C")
     ionization_current = float10(608, unit="µA")
     fan_speed = integer(609, signed=False, nan=0xFFFF, unit="rpm")
     smoke_temp = float10(604, unit="°C")
@@ -116,7 +118,6 @@ class HotWater(ISystemComponent):
     """Domestic hot-water readings and setpoints in the iSystem layout."""
 
     temp = float10(603, unit="°C")
-    bottom_temp = float10(623, unit="°C")
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
@@ -128,6 +129,7 @@ class CircuitA(ISystemComponent):
 
     room_temp = float10(614, unit="°C")
     calc_temp = float10(615, unit="°C")
+    supply_temp = float10(621, unit="°C")
     mode = masked_enum(_MODE_A_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(637, 0x06, ActiveMode)
     permanent_derogation = NumberField[bool | None](
