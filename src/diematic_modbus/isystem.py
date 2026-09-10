@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from modbus_connection import ModbusUnit
-from modbus_connection.model import Component, bit, integer
+from modbus_connection.model import Component, NumberField, bit, integer
 
 from ._base import _HEATING_MASK, _HOT_WATER_MASK, _Regulator
 from .enums import (
@@ -79,6 +79,16 @@ _SLOPE = snap_clamp(0.1, 0.0, 4.0)
 _SUMMER_WINTER = snap_clamp(0.5, 15.0, 30.5)
 
 
+def _permanent_derogation(raw: int) -> bool | None:
+    """Decode verified heating override modes independently of hot-water bits."""
+    mode = raw & _HEATING_MASK
+    if mode in (HeatingMode.PERM_DAY, HeatingMode.PERM_NIGHT):
+        return True
+    if mode in (HeatingMode.AUTO, HeatingMode.TEMP_DAY, HeatingMode.TEMP_NIGHT):
+        return False
+    return None
+
+
 class ISystemComponent(Component):
     """An iSystem register bundle limited to the supported read windows."""
 
@@ -120,6 +130,9 @@ class CircuitA(ISystemComponent):
     calc_temp = float10(615, unit="°C")
     mode = masked_enum(_MODE_A_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(637, 0x06, ActiveMode)
+    permanent_derogation = NumberField[bool | None](
+        _MODE_A_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
     program = time_program(231)
     pump_on = bit(427, 4)
     ambient_influence = integer(654, signed=False)
@@ -137,10 +150,14 @@ class CircuitB(ISystemComponent):
     supply_temp = float10(605, unit="°C")
     mode = masked_enum(_MODE_B_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(638, 0x06, ActiveMode)
-    permanent_derogation = bit(_MODE_B_ISYSTEM, 6)
+    permanent_derogation = NumberField[bool | None](
+        _MODE_B_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
     all_circuits_derogation = bit(_MODE_B_ISYSTEM, 7)
     program = time_program(232)
     pump_on = bit(428, 4)
+    valve_opening = bit(428, 1)
+    valve_closing = bit(428, 0)
     ambient_influence = integer(660, signed=False)
     slope = float10(661, writable=_SLOPE, force_fc16=True, unit="K/K")
     min_temp = float10(662, writable=True, force_fc16=True, unit="°C")
@@ -158,7 +175,9 @@ class CircuitC(ISystemComponent):
     mode = masked_enum(_MODE_C_ISYSTEM, _HEATING_MASK, HeatingMode)
     active_mode = masked_enum(639, 0x06, ActiveMode)
     program = time_program(233)
-    permanent_derogation = bit(_MODE_C_ISYSTEM, 6)
+    permanent_derogation = NumberField[bool | None](
+        _MODE_C_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
     all_circuits_derogation = bit(_MODE_C_ISYSTEM, 7)
     ambient_influence = integer(668, signed=False)
     slope = float10(669, writable=_SLOPE, force_fc16=True, unit="K/K")

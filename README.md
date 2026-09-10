@@ -423,9 +423,11 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Day, night and frost-protection targets | Every exposed circuit | `day_target`, `night_target`, `antifreeze_target` |
 | Requested heating mode | Every exposed circuit | `mode` |
 | Current day, night or frost-protection state | iSystem A/B/C | `active_mode` |
-| Whether the active override is permanent and whether it covers all circuits | iSystem A/B/C | `permanent_derogation`, `all_circuits_derogation` |
+| Whether the requested heating override has no end time | iSystem A/B/C | `permanent_derogation` |
+| Reported all-circuits override flag | iSystem B/C | `all_circuits_derogation` |
 | Selected heating program, P1 to P4 | iSystem A/B/C | `program` |
 | Heating pump status | A/B on both layouts, not C | `pump_on` |
+| Mixing-valve direction commands | iSystem B only | `valve_opening`, `valve_closing` |
 | Water supply temperature | B on both layouts | `supply_temp` |
 | Heating-curve slope and room-sensor influence setting | Every exposed circuit | `slope`, `ambient_influence` |
 | Circuit minimum/maximum temperatures | Base B, iSystem B/C | `min_temp`, `max_temp` |
@@ -440,6 +442,20 @@ as outdoor temperature changes. Room-sensor influence is returned as a
 number, without a percentage interpretation. Requested `mode` and current
 `active_mode` are different: automatic mode can currently be running either
 the day or night setting.
+
+`permanent_derogation` returns `True` for permanent day/night overrides (`7/7`
+on the panel), `False` for automatic mode and temporary day/night overrides,
+and `None` before a read or for antifreeze, holiday, and unknown modes whose
+override semantics have not been verified. Hot-water overrides do not affect
+this value. Permanent means there is no scheduled end to the override, not
+that the burner runs continuously.
+
+`circuit_b.valve_opening` and `valve_closing` are read-only Boolean flags:
+`True` means the corresponding direction is commanded, `False` means it is
+not commanded, and `None` means no value has been read yet. They expose bits
+1 and 0 of register 428 independently. Neither flag measures valve position
+or proves physical movement. No derived stopped or fully-open/closed state
+is provided. After a failed refresh, check the update report for stale values.
 
 ### Controls and accepted values
 
@@ -549,6 +565,7 @@ claim for every boiler with a similar panel.
 | iSystem circuit B/C slope and min/max flow-temperature writes | Verified on 2026-09-05, each value read, changed and restored. Boiler minimum/maximum writes were refused on this unit, so those stay read-only |
 | iSystem circuit B/C heating modes | Writes to 659/667 worked and the panel followed without a refresh command |
 | iSystem hot-water automatic/comfort modes | Both directions worked through 659. Choosing an override end time remains panel-only |
+| iSystem override timing | Compared with panel selections on 2026-09-10: circuit B timed/permanent DAY read `0x24`/`0x04`, NIGHT `0x22`/`0x02`. With B held at permanent DAY, timed/permanent DHW read `0x54`/`0x14`. Heating and DHW were restored to AUTO, confirmed by `0x08`. Circuit C is not installed. A/C use the same interpretation by assumption, not hardware verification |
 | Base-layout hot-water mode writes | Verified on 2026-09-07 through the library. The boiler mirrors the hot-water bits into registers 17 and 26 and rejects a write to 17 alone, so the base layout writes both together. Read original, set comfort, confirmed on the panel, restored |
 | Circuit A mode writes | Did not work on the installation without circuit A. Testing on an installation with A is still needed |
 | Circuit B P4 and hot-water schedules | Compared with the panel. Editing B's P4 changed the matching data without changing A/C |
@@ -559,6 +576,14 @@ claim for every boiler with a similar panel.
 | Wide schedule writes | A single frame wider than one day wraps. Probed 2026-09-05: one six-register write left day one correct but scrambled day two, the same internal five-word-per-day layout that wraps wide reads. A whole week must be seven separate `set_day` calls, so there is no single-frame week write |
 | Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
 | Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
+
+Circuit B valve-direction flags were compared with the panel arrows on
+2026-09-10. Closing, opening, then closing matched register 428 values
+`0x0001`, `0x0012`, and `0x0011`. The day room target was temporarily changed
+from 21 to 24 °C through normal panel controls, then restored to 21 °C with
+readback confirmation. Heating and hot water remained AUTO. Idle and
+simultaneous direction commands were not observed. The bit assignments come
+from the Sofrel S500 Tableau D1 OPTIONS B&C row and the Delta P4 address map.
 
 ### Known limits
 

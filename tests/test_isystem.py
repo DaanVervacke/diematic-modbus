@@ -1,5 +1,6 @@
 from datetime import time
 
+import pytest
 from modbus_connection.mock import MockModbusUnit
 
 from diematic_modbus import (
@@ -104,6 +105,24 @@ async def test_isystem_research_registers_decode(mock_modbus_unit):
     assert boiler.settings.boiler_max == 75.0
 
 
+async def test_isystem_b_valve_commands_decode_independently(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    circuit = boiler.circuit_b
+    assert circuit.valve_opening is None
+    assert circuit.valve_closing is None
+    for raw, opening, closing in (
+        (0x0001, False, True),
+        (0x0012, True, False),
+        (0x0011, False, True),
+        (0xFFFC, False, False),
+        (0xFFFF, True, True),
+    ):
+        mock_modbus_unit.holding[428] = raw
+        await boiler.async_update()
+        assert circuit.valve_opening is opening
+        assert circuit.valve_closing is closing
+
+
 async def test_isystem_derogation_bits_decode(mock_modbus_unit):
     _seed(mock_modbus_unit)
     mock_modbus_unit.holding.update({659: 0x02 | 0x40, 667: 0x08 | 0x80})
@@ -114,6 +133,41 @@ async def test_isystem_derogation_bits_decode(mock_modbus_unit):
     assert boiler.circuit_b.all_circuits_derogation is False
     assert boiler.circuit_c.permanent_derogation is False
     assert boiler.circuit_c.all_circuits_derogation is True
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        (0x04, True),
+        (0x02, True),
+        (0x08, False),
+        (0x24, False),
+        (0x22, False),
+        (0x01, None),
+        (0x21, None),
+        (0x00, None),
+        (0x06, None),
+        (0xFFFF, None),
+        (0x8CCC, None),
+    ],
+)
+@pytest.mark.parametrize("other_bits", [0x00, 0x10, 0x40, 0x50, 0x80, 0xFFD0])
+async def test_permanent_derogation_uses_only_known_heating_modes(
+    mock_modbus_unit, mode, expected, other_bits
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    for circuit, address in (
+        (boiler.circuit_a, 653),
+        (boiler.circuit_b, 659),
+        (boiler.circuit_c, 667),
+    ):
+        assert circuit.permanent_derogation is None
+        mock_modbus_unit.holding[address] = mode | other_bits
+        await circuit.async_update()
+        assert circuit.permanent_derogation is expected
+        mock_modbus_unit.holding[address] = 0x08 | other_bits
+        await circuit.async_update()
+        assert circuit.permanent_derogation is False
 
 
 async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
