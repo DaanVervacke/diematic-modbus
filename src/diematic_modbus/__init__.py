@@ -12,6 +12,7 @@ from .enums import (
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
 from .models import MODEL_CODES
+from .probe import UnsupportedDiematicError, async_probe
 from .regulator import Diematic
 
 __all__ = [
@@ -31,6 +32,8 @@ __all__ = [
     "Schedules",
     "Sensors",
     "Settings",
+    "UnsupportedDiematicError",
     "UpdateReport",
     "WeekProgram",
+    "async_probe",
 ]
