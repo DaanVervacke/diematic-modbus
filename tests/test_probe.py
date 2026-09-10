@@ -119,15 +119,16 @@ async def test_probe_rejects_when_both_layouts_fail(mock_modbus_unit):
         pytest.param(ModbusTimeoutError("timeout"), id="timeout"),
     ],
 )
-async def test_probe_retains_transport_errors(mock_modbus_unit, error):
+async def test_probe_reports_transport_errors(mock_modbus_unit, error):
     _seed_isystem(mock_modbus_unit)
     mock_modbus_unit.fail_read(3, error)
     mock_modbus_unit.fail_read(457, error)
 
-    detection = await async_detect(mock_modbus_unit)
+    with pytest.raises(DiematicProbeError) as caught:
+        await async_detect(mock_modbus_unit)
 
-    assert isinstance(detection.device, DiematicISystem)
-    block = detection.base_probe[0]
+    block = caught.value.detection.base_probe[0]
     assert block.outcome == "error"
     assert block.error is error
     assert block.error_type == type(error).__name__
+    assert block.error_message == str(error)
