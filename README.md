@@ -60,7 +60,14 @@ controller exposes a reading or setting.
 The test iSystem boiler answers both layouts. They overlap, but neither
 contains everything the other does. For example, the base layout includes
 solar temperatures and power readings that the iSystem class does not.
-There is no automatic panel detection, and Diematic Delta is not supported.
+Diematic Delta is not supported.
+
+The library can detect the register layout with `async_probe()`. It reads the
+base identity registers and the iSystem identity registers independently. A
+known D3 or m3 code selects the base D3 variant, a known D4 code selects the
+base D4 variant, and a responding iSystem identity block selects
+`DiematicISystem`. An unknown device code raises `UnsupportedDiematicError`.
+Transport and device errors are raised as Modbus errors.
 
 The reported type code, such as `D4`, does not reliably identify the physical
 boiler model. Use the boiler's label and the panel name when reporting your
@@ -238,6 +245,24 @@ Your application creates and closes the connection, then passes a
 `ModbusUnit` to the regulator. The regulator does not own the connection or
 start background polling. It has no Home Assistant dependency.
 
+### Detect the layout
+
+Use `async_probe()` when the controller layout is unknown. It returns a ready
+`Diematic` or `DiematicISystem` object over the unit you provide:
+
+```python
+from diematic_modbus import async_probe
+
+boiler = await async_probe(conn.for_unit(10))
+await boiler.async_update()
+```
+
+The base identity probe reads registers `3-6`, `108-110`, and `457`. The
+iSystem identity probe reads `600` and `679-684`. Unsupported address and
+function responses mean that a layout is not present. Connection, timeout,
+protocol, gateway, and device errors are not treated as layout detection
+results.
+
 ### Read values
 
 This example reads an iSystem through a gateway that forwards RTU messages.
@@ -271,9 +296,10 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-For the base layout, use `Diematic(unit, variant=DiematicVariant.DIEMATIC_3)`
-or `DIEMATIC_4`, importing both names from `diematic_modbus`. Direct serial
-connections can use `ModbusSerialParams` instead of `ModbusTcpParams`.
+If the layout is already known, use `Diematic(unit,
+variant=DiematicVariant.DIEMATIC_3)` or `DIEMATIC_4`, importing both names from
+`diematic_modbus`. Direct serial connections can use `ModbusSerialParams`
+instead of `ModbusTcpParams`.
 
 Read values through `sensors`, `hot_water`, `circuit_a`, `circuit_b`,
 `settings`, and `identity`. iSystem also has `circuit_c`, `schedules`,
@@ -576,6 +602,7 @@ claim for every boiler with a similar panel.
 | Wide schedule writes | A single frame wider than one day wraps. Probed 2026-09-05: one six-register write left day one correct but scrambled day two, the same internal five-word-per-day layout that wraps wide reads. A whole week must be seven separate `set_day` calls, so there is no single-frame week write |
 | Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
 | Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
+| Holiday mode | Setting one day of `VAKANTIE` changed iSystem mode registers 659 and 667 to `33`. Selecting `AUTOMATISCH` restored both to `8`. Registers 309-347 stayed `0xFFFF` and are not holiday date storage on this firmware |
 
 Circuit B valve-direction flags were compared with the panel arrows on
 2026-09-10. Closing, opening, then closing matched register 428 values
@@ -599,6 +626,9 @@ from the Sofrel S500 Tableau D1 OPTIONS B&C row and the Delta P4 address map.
   were unreliable. Base-layout solar fields remain available, not verified.
 - Reading an installer or diagnostic number successfully does not confirm
   its physical meaning, scale, or unit. Panel comparisons are still needed.
+- The complete iSystem `metingen` page on the test panel had no entries matching
+  the unverified `outlet_temp` and `bottom_temp` fields. Their register meanings
+  remain unconfirmed on this installation.
 - There is no fault-reset command or automatic discovery of fitted circuits
   and modules. Schedules are writable one day at a time, but there is no
   program-selection control.
