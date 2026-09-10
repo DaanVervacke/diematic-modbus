@@ -124,10 +124,10 @@ async def test_probe_reports_transport_errors(mock_modbus_unit, error):
     mock_modbus_unit.fail_read(3, error)
     mock_modbus_unit.fail_read(457, error)
 
-    with pytest.raises(DiematicProbeError) as caught:
-        await async_detect(mock_modbus_unit)
+    detection = await async_detect(mock_modbus_unit)
 
-    block = caught.value.detection.base_probe[0]
+    assert isinstance(detection.device, DiematicISystem)
+    block = detection.base_probe[0]
     assert block.outcome == "error"
     assert block.error is error
     assert block.error_type == type(error).__name__
@@ -140,8 +140,9 @@ async def test_probe_failure_retains_known_variant(mock_modbus_unit):
     error = ModbusTimeoutError("timeout")
     mock_modbus_unit.fail_read(3, error)
 
-    with pytest.raises(DiematicProbeError) as caught:
-        await async_detect(mock_modbus_unit)
+    detection = await async_detect(mock_modbus_unit)
 
-    assert caught.value.detection.raw_type_code == 24
-    assert caught.value.detection.variant is DiematicVariant.DIEMATIC_4
+    assert isinstance(detection.device, DiematicISystem)
+    assert detection.raw_type_code == 24
+    assert detection.variant is DiematicVariant.DIEMATIC_4
+    assert detection.base_probe[0].error is error

@@ -107,7 +107,7 @@ async def async_detect(unit: ModbusUnit) -> DiematicDetection:
     base_detected = variant is not None and all(
         block.outcome == "success" for block in base_probe
     )
-    if errors or (type_code is not None and variant is None):
+    if type_code is not None and variant is None:
         raise DiematicProbeError(
             DiematicDetection(
                 None,
@@ -136,6 +136,17 @@ async def async_detect(unit: ModbusUnit) -> DiematicDetection:
             False,
             base_probe,
             isystem_probe,
+        )
+    if errors:
+        raise DiematicProbeError(
+            DiematicDetection(
+                None,
+                type_code,
+                variant,
+                False,
+                base_probe,
+                isystem_probe,
+            )
         )
     raise DiematicProbeError(
         DiematicDetection(
