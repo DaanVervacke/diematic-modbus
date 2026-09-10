@@ -12,7 +12,13 @@ from .enums import (
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
 from .models import MODEL_CODES
-from .probe import DiematicDetection, DiematicProbeError, async_detect, async_probe
+from .probe import (
+    DiematicDetection,
+    DiematicProbeError,
+    ProbeBlock,
+    async_detect,
+    async_probe,
+)
 from .regulator import Diematic
 
 __all__ = [
@@ -31,6 +37,7 @@ __all__ = [
     "HotWaterMode",
     "HotWaterPriority",
     "Identity",
+    "ProbeBlock",
     "Schedules",
     "Sensors",
     "Settings",

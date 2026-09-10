@@ -112,7 +112,7 @@ async def async_detect(unit: ModbusUnit) -> DiematicDetection:
             DiematicDetection(
                 None,
                 type_code,
-                None,
+                variant,
                 isystem_detected,
                 base_probe,
                 isystem_probe,

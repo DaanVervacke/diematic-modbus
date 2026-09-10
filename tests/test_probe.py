@@ -132,3 +132,16 @@ async def test_probe_reports_transport_errors(mock_modbus_unit, error):
     assert block.error is error
     assert block.error_type == type(error).__name__
     assert block.error_message == str(error)
+
+
+async def test_probe_failure_retains_known_variant(mock_modbus_unit):
+    _seed_base(mock_modbus_unit, 24)
+    _seed_isystem(mock_modbus_unit)
+    error = ModbusTimeoutError("timeout")
+    mock_modbus_unit.fail_read(3, error)
+
+    with pytest.raises(DiematicProbeError) as caught:
+        await async_detect(mock_modbus_unit)
+
+    assert caught.value.detection.raw_type_code == 24
+    assert caught.value.detection.variant is DiematicVariant.DIEMATIC_4
