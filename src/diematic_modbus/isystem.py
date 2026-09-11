@@ -107,6 +107,7 @@ class Sensors(ISystemComponent):
     universal_temp = float10(624, unit="°C")
     ionization_current = float10(608, unit="µA")
     fan_speed = integer(609, signed=False, nan=0xFFFF, unit="rpm")
+    instant_power = integer(613, signed=False, unit="%")
     smoke_temp = float10(604, unit="°C")
     water_pressure = float10(610, unit="bar")
     burner_on = bit(427, 3)

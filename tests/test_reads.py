@@ -1,6 +1,7 @@
+import pytest
 from modbus_connection.mock import MockModbusUnit
 
-from diematic_modbus import Diematic, HeatingMode, HotWaterMode
+from diematic_modbus import Diematic, HeatingMode, HotWaterMode, HotWaterPriority
 
 
 def _seed(unit: MockModbusUnit) -> None:
@@ -15,6 +16,7 @@ def _seed(unit: MockModbusUnit) -> None:
             18: 210,
             27: 0xFFFF,
             59: 550,
+            60: 0,
             62: 500,
             75: 650,
             110: 25,
@@ -54,6 +56,7 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.hot_water.temp == 50.0
     assert diematic.hot_water.temp_dpsm == 50.5
     assert diematic.hot_water.mode is HotWaterMode.TEMP
+    assert diematic.hot_water.priority is HotWaterPriority.TOTAL
     assert diematic.hot_water.day_target == 55.0
 
     assert diematic.sensors.calc_boiler_temp == 70.0
@@ -66,6 +69,27 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.circuit_a.pump_on is True
 
     assert diematic.identity.year == 25
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (0, HotWaterPriority.TOTAL),
+        (1, HotWaterPriority.RELATIVE),
+        (2, HotWaterPriority.NON_PRIORITY),
+        (3, 3),
+    ],
+)
+async def test_base_hot_water_priority_decodes_low_byte(
+    mock_modbus_unit, raw, expected
+):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding[60] = raw
+    diematic = Diematic(mock_modbus_unit)
+
+    await diematic.async_update()
+
+    assert diematic.hot_water.priority == expected
 
 
 async def test_fork_registers_decode(mock_modbus_unit):

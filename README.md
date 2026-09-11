@@ -429,6 +429,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Additional outdoor reading from the boiler bus | Base | `sensors.outdoor_temp_bus` |
 | Additional boiler temperature from the DPSM module | Base | `sensors.boiler_temp_dpsm` |
 | Water pressure (bar), fan speed (rpm), flame-sensing current (µA) | Both | `sensors.water_pressure`, `fan_speed`, `ionization_current` |
+| Instantaneous boiler output, reported as percentage | iSystem | `sensors.instant_power` |
 | Burner and hot-water pump status | Both | `sensors.burner_on`, `hot_water_pump_on` |
 | Reported pump output (%) | Base | `sensors.pump_power` |
 | Instantaneous and average power (kW) | Base | `sensors.instant_power`, `average_power` |
@@ -446,6 +447,10 @@ Temperatures are in °C. The averaging period for power is not defined by the
 library. Pump and burner status are controller-reported states, not
 independent proof of water flow or combustion. There is no energy-total,
 fuel-consumption, or direct pump/burner control API.
+
+The iSystem `sensors.instant_power` field uses register 613 and follows the
+MCA panel's `MOM.VERM.KETEL` percentage during a live burner ramp on the tested
+installation. Its scale and availability remain generation-qualified.
 
 ### Heating and hot water
 
@@ -468,8 +473,13 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Circuit minimum/maximum temperatures | Base B, iSystem B/C | `min_temp`, `max_temp` |
 | Circuit A minimum/maximum temperatures | iSystem, cached | `config.zone_a_min`, `config.zone_a_max` |
 | Hot-water temperature, requested mode and day/night targets | Both | `hot_water.temp`, `mode`, `day_target`, `night_target` |
+| Hot-water loading priority | Base, documented register map | `hot_water.priority` |
 | Additional hot-water temperature from the DPSM module | Base | `hot_water.temp_dpsm` |
 | Current hot-water operating state | iSystem | `hot_water.active_mode` |
+
+Base `hot_water.priority` uses the documented low-plane register 60 values 0 for
+total, 1 for relative, and 2 for non-priority. It is read-only and has not been
+panel-verified across every base-layout generation.
 
 The heating curve describes how the controller adjusts heating temperature
 as outdoor temperature changes. Room-sensor influence is returned as a

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from modbus_connection.model import Component, bit, integer
 
-from .enums import HeatingMode, HotWaterMode
+from .enums import HeatingMode, HotWaterMode, HotWaterPriority
 from .faults import MODULENS_FAULTS
 from .fields import code_map, fault_code, float10, masked_enum, snap_clamp
 from .models import MODEL_CODES
@@ -51,6 +51,7 @@ class HotWater(DiematicComponent):
     """Domestic hot-water readings and setpoints."""
 
     temp = float10(62, unit="°C")
+    priority = masked_enum(60, 0xFF, HotWaterPriority)
     temp_dpsm = float10(459, unit="°C")
     mode = masked_enum(17, 0x50, HotWaterMode)
     day_target = float10(59, writable=_HOT_WATER, force_fc16=True, unit="°C")
