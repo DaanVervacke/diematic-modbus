@@ -306,7 +306,7 @@ asyncio.run(main())
 If the layout is already known, use `Diematic(unit,
 variant=DiematicVariant.DIEMATIC_3)` or `DIEMATIC_4`, importing both names from
 `diematic_modbus`. A plain Modbus TCP gateway uses
-`ModbusTcpParams(host="192.168.1.50", port=502)` without a framer; a direct
+`ModbusTcpParams(host="192.168.1.50", port=502)` without a framer. A direct
 serial connection uses `ModbusSerialParams(device="/dev/ttyUSB0")`.
 
 Read values through `sensors`, `hot_water`, `circuit_a`, `circuit_b`,

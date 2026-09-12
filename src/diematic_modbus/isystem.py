@@ -410,7 +410,7 @@ class DiematicISystem(_Regulator):
         return self._force_circuit_c or self.circuit_c.room_temp is not None
 
     async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit C mode; HOLIDAY is rejected as panel-only."""
+        """Set heating circuit C mode. HOLIDAY is rejected as panel-only."""
         await self._write_mode((_MODE_C_ISYSTEM,), _HEATING_MASK, HeatingMode, mode)
 
     async def set_clock(self, moment: datetime) -> None:

@@ -159,7 +159,7 @@ async def _main() -> int:
         description="Read your Diematic boiler once for comparison with its panel.",
         epilog=(
             "Nothing is written unless you add --probe-write. tcp (the default) "
-            "is plain Modbus TCP; use --transport serial --framer rtu with a "
+            "is plain Modbus TCP. Use --transport serial --framer rtu with a "
             "socket:// target for an RTU-over-TCP serial server. "
             "See README.md for setup and reporting results."
         ),
@@ -221,7 +221,7 @@ async def _main() -> int:
         except ModbusError as err:
             print(f"Read failed: {err}")
             print("Check the connection settings and controller address (--unit).")
-            print("tcp targets a plain Modbus TCP gateway; a serial server needs")
+            print("tcp targets a plain Modbus TCP gateway. A serial server needs")
             print("--transport serial --framer rtu with a socket:// target.")
             print("Retry a read-only run after a timeout. Add --debug for details.")
             return 1
