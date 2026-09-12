@@ -10,6 +10,7 @@ from diematic_modbus import (
     HotWaterMode,
 )
 from diematic_modbus.fields import ScheduleDayField, _day_intervals
+from diematic_modbus.isystem import SCHEDULE_BASES
 
 
 async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
@@ -71,6 +72,31 @@ async def test_isystem_set_day_writes_three_words(mock_modbus_unit):
         1, [(time(8, 0), time(9, 0))]
     )
     assert [mock_modbus_unit.holding[a] for a in range(147, 150)] == [0x0, 0xC000, 0x0]
+
+
+@pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
+@pytest.mark.parametrize("weekday", range(1, 8))
+async def test_isystem_set_day_writes_requested_three_register_block(
+    mock_modbus_unit, schedule, base, weekday
+):
+    mock_modbus_unit.holding.update({231: 0x2000, 232: 0x2023, 233: 0x2038})
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.schedules.set_day(schedule, weekday, [(time(8, 0), time(9, 0))])
+
+    start = base + 3 * (weekday - 1)
+    assert [
+        mock_modbus_unit.holding[address] for address in range(start, start + 3)
+    ] == [
+        0x0000,
+        0xC000,
+        0x0000,
+    ]
+    assert [mock_modbus_unit.holding[address] for address in range(231, 234)] == [
+        0x2000,
+        0x2023,
+        0x2038,
+    ]
 
 
 async def test_isystem_schedules_set_day_facade_writes(mock_modbus_unit):

@@ -11,6 +11,7 @@ from diematic_modbus import (
     HotWaterMode,
     HotWaterPriority,
 )
+from diematic_modbus.isystem import ISYSTEM_WINDOWS, SCHEDULE_BASES
 
 
 def _seed(unit: MockModbusUnit) -> None:
@@ -214,6 +215,39 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     assert boiler.diagnostics.zone_aux_type == 3
 
 
+async def test_isystem_config_sentinels_decode_as_missing_values(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({282: 101, 289: 150})
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.async_update()
+
+    assert boiler.config.anticipation_a is None
+    assert boiler.config.footprint_a_day is None
+
+
+async def test_isystem_unknown_fault_and_diagnostics_values_stay_raw(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update(
+        {
+            465: 0x7777,
+            641: 0x07,
+            644: 0xFFFF,
+            710: 0x8CCC,
+            712: 0x1234,
+        }
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.async_update()
+
+    assert boiler.sensors.alarm == 0x7777
+    assert boiler.diagnostics.aux_active_mode == 6
+    assert boiler.diagnostics.boiler_active_mode == 0xFFFF
+    assert boiler.diagnostics.pcu_state == 0x8CCC
+    assert boiler.diagnostics.pcu_block == 0x1234
+
+
 async def test_isystem_dhw_priority_decodes(mock_modbus_unit):
     _seed(mock_modbus_unit)
     mock_modbus_unit.holding.update({674: 1})
@@ -319,11 +353,98 @@ async def test_isystem_schedule_decodes_comfort_ranges(mock_modbus_unit):
     assert boiler.schedules.circuit_c_p4[7] == []
 
 
+@pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
+async def test_isystem_schedule_decodes_all_on_and_all_off_days(
+    mock_modbus_unit, schedule, base
+):
+    mock_modbus_unit.holding.update(
+        {
+            base: 0xFFFF,
+            base + 1: 0xFFFF,
+            base + 2: 0xFFFF,
+            base + 3: 0,
+            base + 4: 0,
+            base + 5: 0,
+        }
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.schedules.programs[schedule].async_update()
+
+    assert boiler.schedules.programs[schedule].week == {
+        1: [(time(0, 0), time(0, 0))],
+        2: [],
+        3: [],
+        4: [],
+        5: [],
+        6: [],
+        7: [],
+    }
+
+
+@pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
+async def test_isystem_schedule_decodes_adjacent_days_independently(
+    mock_modbus_unit, schedule, base
+):
+    mock_modbus_unit.holding.update(
+        {
+            base: 0x8000,
+            base + 1: 0,
+            base + 2: 0,
+            base + 3: 0x4000,
+            base + 4: 0,
+            base + 5: 0,
+        }
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.schedules.programs[schedule].async_update()
+
+    week = boiler.schedules.programs[schedule].week
+    assert week[1] == [(time(0, 0), time(0, 30))]
+    assert week[2] == [(time(0, 30), time(1, 0))]
+    assert all(not week[day] for day in range(3, 8))
+
+
 async def test_isystem_schedule_reads_one_day_per_request(mock_modbus_unit):
     boiler = DiematicISystem(mock_modbus_unit)
     program = boiler.schedules.programs["circuit_b_p4"]
     plan = program._build_plan()
     assert plan.blocks["holding"] == [(147 + 3 * day, 3) for day in range(7)]
+
+
+async def test_isystem_pooled_and_read_once_plans_stay_inside_windows(
+    mock_modbus_unit,
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    plans = [boiler._poll_group]
+    plans.extend(
+        component
+        for name, component in boiler._pending_once.items()
+        if not name.startswith("schedules.")
+    )
+
+    for plan in plans:
+        for start, count in plan._build_plan().blocks["holding"]:
+            end = start + count - 1
+            assert any(
+                window_start <= start and end <= window_end
+                for window_start, window_end in ISYSTEM_WINDOWS
+            )
+
+
+@pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
+async def test_isystem_schedule_reads_all_days_as_three_register_blocks(
+    mock_modbus_unit, schedule, base
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    mock_modbus_unit.read_events.clear()
+
+    await boiler.schedules.programs[schedule].async_update()
+
+    assert [(event.address, event.count) for event in mock_modbus_unit.read_events] == [
+        (base + 3 * day, 3) for day in range(7)
+    ]
 
 
 async def test_isystem_decodes_selected_program(mock_modbus_unit):
@@ -342,9 +463,12 @@ async def test_isystem_decodes_selected_program(mock_modbus_unit):
 
 
 async def test_isystem_read_raw_covers_schedule_blocks(mock_modbus_unit):
-    mock_modbus_unit.holding.update({126: 0x000F, 168: 0x0003, 231: 0x2000})
+    expected = {231: 0x2000, 232: 0x2023, 233: 0x2038}
+    for base in SCHEDULE_BASES.values():
+        expected.update({base + offset: base + offset for offset in range(21)})
+    mock_modbus_unit.holding.update(expected)
     boiler = DiematicISystem(mock_modbus_unit)
+
     raw = await boiler.async_read_raw()
-    assert raw["holding"][126] == 0x000F
-    assert raw["holding"][168] == 0x0003
-    assert raw["holding"][231] == 0x2000
+
+    assert raw["holding"].items() >= expected.items()

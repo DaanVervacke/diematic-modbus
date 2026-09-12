@@ -12,8 +12,16 @@ def test_float10_decodes_sign_magnitude_negative():
     assert Float10Field(0).decode([0x8000 | 50]) == -5.0
 
 
-def test_float10_absent_sensor_is_none():
-    assert Float10Field(0).decode([0xFFFF]) is None
+@pytest.mark.parametrize("raw", [0xFFFF, 0x8CCC])
+def test_float10_absent_sensor_values_are_none(raw):
+    assert Float10Field(0).decode([raw]) is None
+
+
+@pytest.mark.parametrize("raw", [101, 150])
+def test_float10_custom_absent_values_are_none(raw):
+    field = Float10Field(0)
+    field.none_values = (raw,)
+    assert field.decode([raw]) is None
 
 
 def test_float10_encodes_positive():

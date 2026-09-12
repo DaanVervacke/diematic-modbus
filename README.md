@@ -644,6 +644,18 @@ from the Sofrel S500 Tableau D1 OPTIONS B&C row and the Delta P4 address map.
   were unreliable. Base-layout solar fields remain available, not verified.
 - Reading an installer or diagnostic number successfully does not confirm
   its physical meaning, scale, or unit. Panel comparisons are still needed.
+- Manual pages confirm panel concepts, units, ranges and option gates. They do
+  not by themselves confirm Modbus addresses, coefficients, sentinels, masks,
+  function codes, or write acceptance.
+- Register 604's scale remains unresolved: the S500 m3/3/4 table gives a
+  whole-degree coefficient, while the current iSystem decoder uses tenths.
+  Registers 621, 623, 640, and 674 also remain generation- or hardware-qualified.
+- Registers 465 and 435 are investigation-only on this installation. Previous-
+  response data can contaminate isolated reads. Register 428 exposes valve
+  command directions, not physical valve position.
+- The raw `D4` value is a controller/type code, not a chassis identity. Do not
+  transfer Delta, GTW08, or GTW26 register meanings into the base or iSystem
+  classes.
 - The complete iSystem `metingen` page on the test panel had no entries matching
   the optional auxiliary temperatures or Circuit A supply temperature. Those
   sensors are unavailable on this installation.

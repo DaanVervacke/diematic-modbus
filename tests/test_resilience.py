@@ -64,6 +64,45 @@ async def test_isystem_read_once_retries_until_success(mock_modbus_unit):
     assert "schedules.circuit_a_p4" in second.updated
 
 
+async def test_isystem_config_retries_until_success_and_then_latches(
+    mock_modbus_unit,
+):
+    _seed_isystem(mock_modbus_unit)
+    mock_modbus_unit.fail_read(247, IllegalDataAddressError())
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    first = await boiler.async_update()
+    assert "config" in first.failed
+    assert "config" not in first.updated
+
+    mock_modbus_unit.fail_read(247, None)
+    second = await boiler.async_update()
+    assert "config" in second.updated
+
+    third = await boiler.async_update()
+    assert "config" not in third.failed
+    assert "config" not in third.updated
+
+
+async def test_isystem_partial_failure_keeps_stale_and_reports(
+    mock_modbus_unit,
+):
+    _seed_isystem(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    first = await boiler.async_update()
+    assert first.complete
+    assert boiler.sensors.boiler_temp == 65.0
+
+    mock_modbus_unit.holding[602] = 660
+    mock_modbus_unit.fail_read(601, IllegalDataAddressError())
+    report = await boiler.async_update()
+
+    assert not report.complete
+    assert "sensors" in report.failed
+    assert "sensors" not in report.updated
+    assert boiler.sensors.boiler_temp == 65.0
+
+
 async def test_read_raw_dumps_registers(mock_modbus_unit):
     _seed(mock_modbus_unit)
     diematic = Diematic(mock_modbus_unit)
