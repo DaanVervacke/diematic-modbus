@@ -158,12 +158,13 @@ async def _main() -> int:
     parser = argparse.ArgumentParser(
         description="Read your Diematic boiler once for comparison with its panel.",
         epilog=(
-            "Nothing is written unless you add --probe-write. Network gateways must "
-            "forward RTU messages unchanged. "
+            "Nothing is written unless you add --probe-write. tcp (the default) "
+            "is plain Modbus TCP; use --transport serial --framer rtu with a "
+            "socket:// target for an RTU-over-TCP serial server. "
             "See README.md for setup and reporting results."
         ),
     )
-    add_connection_args(parser, connections=(("tcp", "rtu"), ("serial", "rtu")))
+    add_connection_args(parser, connections=(("tcp", "socket"), ("serial", "rtu")))
     parser.add_argument(
         "--unit", type=int, default=10, help="controller's Modbus address (default: 10)"
     )
@@ -220,7 +221,8 @@ async def _main() -> int:
         except ModbusError as err:
             print(f"Read failed: {err}")
             print("Check the connection settings and controller address (--unit).")
-            print("A network gateway must forward RTU messages unchanged.")
+            print("tcp targets a plain Modbus TCP gateway; a serial server needs")
+            print("--transport serial --framer rtu with a socket:// target.")
             print("Retry a read-only run after a timeout. Add --debug for details.")
             return 1
         if not complete:

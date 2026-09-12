@@ -407,30 +407,42 @@ async def test_isystem_schedule_decodes_adjacent_days_independently(
 
 
 async def test_isystem_schedule_reads_one_day_per_request(mock_modbus_unit):
+    _seed(mock_modbus_unit)
     boiler = DiematicISystem(mock_modbus_unit)
-    program = boiler.schedules.programs["circuit_b_p4"]
-    plan = program._build_plan()
-    assert plan.blocks["holding"] == [(147 + 3 * day, 3) for day in range(7)]
+    await boiler.async_update()
+
+    blocks = [
+        (event.address, event.count)
+        for event in mock_modbus_unit.read_events
+        if event.register_type == "holding"
+    ]
+    for base in SCHEDULE_BASES.values():
+        assert all(blocks.count((base + 3 * day, 3)) == 1 for day in range(7))
 
 
-async def test_isystem_pooled_and_read_once_plans_stay_inside_windows(
+async def test_isystem_pooled_and_read_once_reads_stay_inside_windows(
     mock_modbus_unit,
 ):
+    _seed(mock_modbus_unit)
     boiler = DiematicISystem(mock_modbus_unit)
-    plans = [boiler._poll_group]
-    plans.extend(
-        component
-        for name, component in boiler._pending_once.items()
-        if not name.startswith("schedules.")
-    )
+    await boiler.async_update()
 
-    for plan in plans:
-        for start, count in plan._build_plan().blocks["holding"]:
-            end = start + count - 1
-            assert any(
-                window_start <= start and end <= window_end
-                for window_start, window_end in ISYSTEM_WINDOWS
-            )
+    schedule_days = {
+        (base + 3 * day, 3) for base in SCHEDULE_BASES.values() for day in range(7)
+    }
+    blocks = [
+        (event.address, event.count)
+        for event in mock_modbus_unit.read_events
+        if event.register_type == "holding"
+        and (event.address, event.count) not in schedule_days
+    ]
+    assert blocks
+    for start, count in blocks:
+        end = start + count - 1
+        assert any(
+            window_start <= start and end <= window_end
+            for window_start, window_end in ISYSTEM_WINDOWS
+        )
 
 
 @pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())

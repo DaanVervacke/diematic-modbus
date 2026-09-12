@@ -1,5 +1,9 @@
 import pytest
-from modbus_connection import ModbusConnectionError
+from modbus_connection import (
+    ModbusConnectionError,
+    ModbusTimeoutError,
+    ServerDeviceBusyError,
+)
 from modbus_connection.exceptions import IllegalDataAddressError
 
 from diematic_modbus import Diematic, DiematicISystem, HeatingMode, HotWaterMode
@@ -36,6 +40,58 @@ async def test_dead_link_raises(mock_modbus_unit):
     mock_modbus_unit.fail_requests(ModbusConnectionError("link down"))
     with pytest.raises(ModbusConnectionError):
         await diematic.async_update()
+
+
+async def test_regulator_configures_message_spacing(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    Diematic(mock_modbus_unit)
+    assert mock_modbus_unit.message_spacing == 0.05
+
+    _seed_isystem(mock_modbus_unit)
+    DiematicISystem(mock_modbus_unit)
+    assert mock_modbus_unit.message_spacing == 0.05
+
+
+@pytest.mark.parametrize("error", [ModbusTimeoutError(), ServerDeviceBusyError()])
+async def test_pooled_read_retries_timeout_busy_once_then_falls_back(
+    mock_modbus_unit, error
+):
+    _seed_isystem(mock_modbus_unit)
+    mock_modbus_unit.fail_read(601, error)
+    boiler = DiematicISystem(mock_modbus_unit)
+    report = await boiler.async_update()
+
+    assert "sensors" in report.failed
+    assert "sensors" not in report.updated
+    assert "circuit_a" in report.updated
+    blocks = [
+        (event.address, event.count)
+        for event in mock_modbus_unit.read_events
+        if event.register_type == "holding"
+    ]
+    first = next(
+        i for i, (start, count) in enumerate(blocks) if start <= 601 < start + count
+    )
+    assert blocks[: first + 1] == blocks[first + 1 : 2 * (first + 1)]
+
+
+async def test_pooled_read_recovers_after_single_timeout(mock_modbus_unit):
+    _seed_isystem(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    original = mock_modbus_unit.read_holding_registers
+    attempts = 0
+
+    async def flaky(address: int, count: int) -> list[int]:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise ModbusTimeoutError()
+        return await original(address, count)
+
+    mock_modbus_unit.read_holding_registers = flaky
+    report = await boiler.async_update()
+
+    assert report.complete
 
 
 async def test_isystem_schedules_read_once(mock_modbus_unit):

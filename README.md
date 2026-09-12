@@ -272,21 +272,21 @@ results.
 
 ### Read values
 
-This example reads an iSystem through a gateway that forwards RTU messages.
-Replace the example connection settings before running it. It does not
-change settings:
+This example reads an iSystem through an RTU-over-TCP serial server: the
+`device` is a `socket://` URL, and the line uses RTU framing. Replace the
+example connection settings before running it. It does not change settings:
 
 ```python
 import asyncio
 
-from modbus_connection import ModbusTcpParams
+from modbus_connection import ModbusSerialParams
 from modbus_connection.tmodbus import ModbusConnection
 
 from diematic_modbus import DiematicISystem
 
 
 async def main() -> None:
-    params = ModbusTcpParams(host="192.168.1.50", port=502, framer="rtu")
+    params = ModbusSerialParams(device="socket://192.168.1.50:502", framer="rtu")
     conn = ModbusConnection(params, message_spacing=0.05)
     try:
         boiler = DiematicISystem(conn.for_unit(10))
@@ -305,8 +305,9 @@ asyncio.run(main())
 
 If the layout is already known, use `Diematic(unit,
 variant=DiematicVariant.DIEMATIC_3)` or `DIEMATIC_4`, importing both names from
-`diematic_modbus`. Direct serial connections can use `ModbusSerialParams`
-instead of `ModbusTcpParams`.
+`diematic_modbus`. A plain Modbus TCP gateway uses
+`ModbusTcpParams(host="192.168.1.50", port=502)` without a framer; a direct
+serial connection uses `ModbusSerialParams(device="/dev/ttyUSB0")`.
 
 Read values through `sensors`, `hot_water`, `circuit_a`, `circuit_b`,
 `settings`, and `identity`. iSystem also has `circuit_c`, `schedules`,
@@ -594,41 +595,6 @@ explanations or Boolean fault flags.
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
 | Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `zone_aux_type` |
-
-## Hardware testing so far
-
-The recorded test installation is a Diematic iSystem reporting `D4`,
-connected through a Waveshare RS485-to-network gateway. It has no circuit A.
-The following are observations from that installation, not a compatibility
-claim for every boiler with a similar panel.
-
-| Check | Recorded result |
-| --- | --- |
-| Boiler, hot-water and heating readings | Reads worked through both layouts. This does not verify every optional sensor |
-| Temperature targets, heating-curve slope and summer/winter threshold writes | Successful tests were recorded, with original values restored. There is no complete per-field, per-layout test matrix yet |
-| iSystem circuit B/C slope and min/max flow-temperature writes | Verified on 2026-09-05, each value read, changed and restored. Boiler minimum/maximum writes were refused on this unit, so those stay read-only |
-| iSystem circuit B/C heating modes | Writes to 659/667 worked and the panel followed without a refresh command |
-| iSystem hot-water automatic/comfort modes | Both directions worked through 659. Choosing an override end time remains panel-only |
-| iSystem override timing | Compared with panel selections on 2026-09-10: circuit B timed/permanent DAY read `0x24`/`0x04`, NIGHT `0x22`/`0x02`. With B held at permanent DAY, timed/permanent DHW read `0x54`/`0x14`. Heating and DHW were restored to AUTO, confirmed by `0x08`. Circuit C is not installed. A/C use the same interpretation by assumption, not hardware verification |
-| Base-layout hot-water mode writes | Verified on 2026-09-07 through the library. The boiler mirrors the hot-water bits into registers 17 and 26 and rejects a write to 17 alone, so the base layout writes both together. Read original, set comfort, confirmed on the panel, restored |
-| Circuit A mode writes | Did not work on the installation without circuit A. Testing on an installation with A is still needed |
-| Circuit B P4 and hot-water schedules | Compared with the panel. Editing B's P4 changed the matching data without changing A/C |
-| Selected heating program | Circuit A's reported P1/P4/P2/P3 selections matched the panel |
-| Auxiliary schedule | Readable, but no panel page was available to compare it with |
-| Program-selection writes | Attempts on the test boiler were rejected. The library keeps this read-only |
-| Schedule writes | `set_day()` verified on 2026-09-05: wrote a single window, all-comfort and all-off to circuit B Monday, each read back exactly, then restored. Plain per-day three-register writes are accepted, adjacent days were untouched, and no marker is needed |
-| Wide schedule writes | A single frame wider than one day wraps. Probed 2026-09-05: one six-register write left day one correct but scrambled day two, the same internal five-word-per-day layout that wraps wide reads. A whole week must be seven separate `set_day` calls, so there is no single-frame week write |
-| Fault readings | Register 465 reproduced words from the previous response during read-only tests. Neither a fault label nor the apparent no-fault value is reliable on this installation. Individual descriptions remain unverified |
-| Clock writes | iSystem `set_clock()` verified on 2026-09-05: wrote a gross-wrong time and read it back, then restored the correct time. The clock is one register set mirrored at base 4-6/108-110 and iSystem 679-684, writing one moves the other. Plain integer writes are accepted, the base-layout `0xFF00` marker is not needed on the iSystem |
-| Holiday mode | Setting one day of `VAKANTIE` changed iSystem mode registers 659 and 667 to `33`. Selecting `AUTOMATISCH` restored both to `8`. Registers 309-347 stayed `0xFFFF` and are not holiday date storage on this firmware |
-
-Circuit B valve-direction flags were compared with the panel arrows on
-2026-09-10. Closing, opening, then closing matched register 428 values
-`0x0001`, `0x0012`, and `0x0011`. The day room target was temporarily changed
-from 21 to 24 °C through normal panel controls, then restored to 21 °C with
-readback confirmation. Heating and hot water remained AUTO. Idle and
-simultaneous direction commands were not observed. The bit assignments come
-from the Sofrel S500 Tableau D1 OPTIONS B&C row and the Delta P4 address map.
 
 ### Known limits
 

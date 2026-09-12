@@ -6,11 +6,18 @@ import asyncio
 from dataclasses import dataclass
 from enum import IntEnum
 
-from modbus_connection import ModbusConnectionError, ModbusError, ModbusUnit
+from modbus_connection import (
+    ModbusConnectionError,
+    ModbusError,
+    ModbusTimeoutError,
+    ModbusUnit,
+    ServerDeviceBusyError,
+)
 from modbus_connection.model import Component, ComponentGroup
 
 from .enums import DiematicVariant, HeatingMode, HotWaterMode
 
+_MESSAGE_SPACING = 0.05
 _MODE_A = 17
 _MODE_B = 26
 _HEATING_MASK = 0x2F
@@ -55,6 +62,7 @@ class _Regulator:
         """Group bundles for regular polling or a single successful read."""
         self._unit = unit
         self._bundles = bundles
+        unit.set_message_spacing(_MESSAGE_SPACING)
         self._poll = [c for n, c in bundles.items() if n not in read_once]
         self._poll_group = ComponentGroup(unit, self._poll)
         self._names = {id(c): n for n, c in bundles.items()}
@@ -71,11 +79,18 @@ class _Regulator:
     async def _poll_bundles(
         self, updated: set[str], failed: dict[str, ModbusError]
     ) -> None:
-        try:
-            await self._poll_group.async_update()
-        except ModbusConnectionError:
-            raise
-        except ModbusError:
+        for _ in range(2):
+            try:
+                await self._poll_group.async_update()
+                break
+            except ModbusConnectionError:
+                raise
+            except (ModbusTimeoutError, ServerDeviceBusyError):
+                continue
+            except ModbusError:
+                await self._poll_individually(updated, failed)
+                return
+        else:
             await self._poll_individually(updated, failed)
             return
         updated.update(self._names[id(c)] for c in self._poll)
