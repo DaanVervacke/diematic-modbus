@@ -18,7 +18,7 @@ No API token is stored anywhere. Publishing authenticates through OIDC trusted p
 
 ## Cutting a release
 
-1. Merge pull requests into `main`, each carrying exactly one release label (breaking-change, new-feature, enhancement, bugfix, maintenance, documentation, dependencies). The Verify PR Label check enforces this.
+1. Merge pull requests into `main`, each carrying exactly one release label (breaking-change, new-feature, enhancement, bugfix, maintenance, documentation, dependencies). The Verify PR Label check requires at least one valid release label. Keep one label per PR so the release bump is unambiguous.
 2. Release Drafter keeps a draft GitHub Release up to date, grouping the merged changes and resolving the next version from the labels.
 3. When ready, open the draft in the Releases page, confirm the resolved version tag looks right, and publish it. Publishing creates the tag and triggers the Release workflow.
 4. The Release workflow runs the full gate, builds from the tag, guards that the built version matches the tag, and publishes to PyPI through the `pypi` environment.

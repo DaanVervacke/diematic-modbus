@@ -43,8 +43,6 @@ to the panel's temperature settings, not necessarily the time of day.
   application, read values, and make supported changes.
 - [Full feature reference](#full-feature-reference): check individual
   readings, controls, and differences between layouts.
-- [Hardware testing so far](#hardware-testing-so-far): see what has actually
-  been tried, rather than just implemented.
 
 ## Supported systems
 
@@ -59,7 +57,8 @@ controller exposes a reading or setting.
 
 The test iSystem boiler answers both layouts. They overlap, but neither
 contains everything the other does. For example, the base layout includes
-solar temperatures and power readings that the iSystem class does not.
+solar temperatures and kW power readings, while iSystem exposes percentage
+power readings instead.
 Diematic Delta is not supported.
 
 The library can detect the register layout with `async_detect()` or
@@ -87,11 +86,11 @@ or write a program.
 You need Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), a copy of this
 repository, and a working connection to the controller's Modbus port.
 
-The script supports a serial adapter or a network gateway that forwards
-Modbus RTU messages unchanged. That last detail matters: a gateway configured
-to translate to ordinary Modbus TCP is not the connection mode this script
-uses. You need its IP address and port, or your serial adapter's device path,
-plus the controller's Modbus address.
+The script supports plain Modbus TCP, RTU-over-TCP serial servers, and direct
+serial adapters. Plain Modbus TCP is the default network mode. An
+RTU-over-TCP server needs `--transport serial --framer rtu` and a
+`socket://` target. You need the gateway's address and port, or your serial
+adapter's device path, plus the controller's Modbus address.
 
 Download and extract this repository, or clone it:
 
@@ -106,7 +105,7 @@ script. You do not need to install this package globally.
 
 ### Run a read-only test
 
-For an iSystem panel through a network gateway:
+For an iSystem panel through a plain Modbus TCP gateway:
 
 ```shell
 uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 --unit 10 --layout isystem
@@ -115,6 +114,12 @@ uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 --unit 10 --
 Replace `192.168.1.50` and `502` with your gateway's address and port. Replace
 `10` if your controller uses a different Modbus address. These are examples,
 not values the script can discover for you.
+
+For an RTU-over-TCP serial server, use a `socket://` target and RTU framing:
+
+```shell
+uv run --extra cli scripts/read_diematic.py socket://192.168.1.50:502 --transport serial --framer rtu --unit 10 --layout isystem
+```
 
 Use `--layout base` for the Diematic 3/4 base layout. On an iSystem, use
 `--layout both` to compare both sets of readings. The script reads the base
@@ -169,9 +174,10 @@ RS485 bus can cause timeouts, so rerun the read-only command before concluding
 that a value is unsupported. `--timeout 20` allows 20 seconds per request
 instead of the default 10. Neither option fixes incorrect wiring or framing.
 
-For troubleshooting, add `--debug` to the same command. It prints the sent
-and received Modbus messages as well as the normal output. For example,
-this saves both in a text file:
+For troubleshooting, add `--debug` to the same command. It enables connection
+and backend debug logging alongside the normal output. The backend may log
+connection lifecycle, timeout, and transport details, but it does not
+guarantee raw frame dumps. For example, this saves both in a text file:
 
 ```shell
 uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 --unit 10 --layout isystem --debug > diematic-read.txt 2>&1
@@ -196,7 +202,7 @@ Open an issue in this repository with:
 - Which circuits and optional modules are fitted, and which have room sensors.
 - Your adapter or gateway model, its connection settings, and the command
   used. Replace private addresses or device paths if you prefer.
-- The script output, with `--debug` output and any traceback when a read fails.
+- The script output, with any `--debug` output and traceback when a read fails.
 - A few specific comparisons, such as "circuit B night target: panel 17 °C,
   script 17.0 °C," plus any differences. Say what you could not check.
 - The code version you ran. `git rev-parse HEAD` gives the commit if you
@@ -433,7 +439,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Instantaneous boiler output, reported as percentage | iSystem | `sensors.instant_power` |
 | Burner and hot-water pump status | Both | `sensors.burner_on`, `hot_water_pump_on` |
 | Reported pump output (%) | Base | `sensors.pump_power` |
-| Instantaneous and average power (kW) | Base | `sensors.instant_power`, `average_power` |
+| Instantaneous and average power (kW) | Base | `sensors.instant_power`, `sensors.average_power` |
 | Solar and solar-tank temperatures | Base | `sensors.solar_temp`, `solar_tank_temp` |
 | Fault label or unknown fault number | Both | `sensors.alarm` |
 | Raw sensor-fault bitmap | Base | `sensors.sensor_faults` |

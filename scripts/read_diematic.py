@@ -187,7 +187,7 @@ async def _main() -> int:
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="include sent/received messages for troubleshooting",
+        help="include connection and backend debug logging for troubleshooting",
     )
     parser.add_argument(
         "--probe-write",
