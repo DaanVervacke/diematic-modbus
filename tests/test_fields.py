@@ -1,7 +1,12 @@
 import pytest
 
 from diematic_modbus.enums import ActiveMode, HeatingMode, HotWaterMode
-from diematic_modbus.fields import Float10Field, masked_enum, snap_clamp
+from diematic_modbus.fields import (
+    Float10Field,
+    boiler_type_field,
+    masked_enum,
+    snap_clamp,
+)
 
 
 def test_float10_decodes_positive_tenths():
@@ -71,3 +76,14 @@ def test_holiday_mode_preserves_hot_water_mode():
     hot_water = masked_enum(0, 0x50, HotWaterMode)
     assert heating.decode([0x71]) is HeatingMode.HOLIDAY
     assert hot_water.decode([0x71]) is HotWaterMode.TEMP
+
+
+def test_boiler_type_field_decodes_known_and_unknown_codes():
+    """boiler_type_field maps register 457 via MODEL_CODES, unknowns as raw ints."""
+    field = boiler_type_field()
+    assert field.address == 457
+    # The field wraps code_map with MODEL_CODES, so verify the conversion is wired.
+    # We exercise the converter directly to avoid the full Component read pipeline.
+    assert field.convert(24) == "D4"
+    assert field.convert(0) == "3-25LP"
+    assert field.convert(999) == 999  # unknown code preserved as raw int

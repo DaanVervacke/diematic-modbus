@@ -11,13 +11,11 @@ from modbus_connection import (
 
 from .enums import DiematicVariant
 from .isystem import DiematicISystem
+from .models import BASE_VARIANTS
 from .regulator import Diematic
 
 _BASE_IDENTITY_BLOCKS = ((3, 4), (108, 3), (457, 1))
 _ISYSTEM_IDENTITY_BLOCKS = ((600, 1), (679, 6))
-_BASE_VARIANTS = {code: DiematicVariant.DIEMATIC_3 for code in (20, 22)} | {
-    24: DiematicVariant.DIEMATIC_4
-}
 
 
 @dataclass(frozen=True)
@@ -99,7 +97,7 @@ async def async_detect(unit: ModbusUnit) -> DiematicDetection:
     isystem_probe = await _async_read_blocks(unit, _ISYSTEM_IDENTITY_BLOCKS)
     type_values = _block_values(base_probe, 457)
     type_code = type_values[0] if type_values is not None else None
-    variant = _BASE_VARIANTS.get(type_code) if type_code is not None else None
+    variant = BASE_VARIANTS.get(type_code) if type_code is not None else None
     errors = tuple(
         block for block in (*base_probe, *isystem_probe) if block.outcome == "error"
     )

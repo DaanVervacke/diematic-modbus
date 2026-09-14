@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .enums import DiematicVariant
+
 MODEL_CODES: dict[int, str] = {
     0: "3-25LP",
     1: "3-15LP",
@@ -33,4 +35,10 @@ MODEL_CODES: dict[int, str] = {
     36: "C610",
     37: "C230",
     40: "Robur HP",
+}
+
+BASE_VARIANTS: dict[int, DiematicVariant] = {
+    code: DiematicVariant.DIEMATIC_3 for code in (20, 22)
+} | {
+    24: DiematicVariant.DIEMATIC_4,
 }

@@ -19,7 +19,7 @@ from .faults import MODULENS_FAULTS
 from .fields import (
     DaySchedule,
     WeekSchedule,
-    code_map,
+    boiler_type_field,
     fault_code,
     float10,
     masked_enum,
@@ -27,7 +27,6 @@ from .fields import (
     snap_clamp,
     time_program,
 )
-from .models import MODEL_CODES
 
 _MODE_A_ISYSTEM = 653
 _MODE_B_ISYSTEM = 659
@@ -333,7 +332,7 @@ class Identity(ISystemComponent):
     """Regulator identity and clock registers in the iSystem layout."""
 
     software_version = integer(600, signed=False)
-    boiler_type = code_map(457, MODEL_CODES)
+    boiler_type = boiler_type_field()
     hour = integer(679, signed=False)
     minute = integer(680, signed=False)
     weekday = integer(681, signed=False)
