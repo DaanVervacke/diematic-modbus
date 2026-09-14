@@ -1,8 +1,12 @@
+from datetime import time
+
 import pytest
 
 from diematic_modbus.enums import ActiveMode, HeatingMode, HotWaterMode
 from diematic_modbus.fields import (
     Float10Field,
+    ScheduleDayField,
+    _day_intervals,
     boiler_type_field,
     masked_enum,
     snap_clamp,
@@ -76,6 +80,24 @@ def test_holiday_mode_preserves_hot_water_mode():
     hot_water = masked_enum(0, 0x50, HotWaterMode)
     assert heating.decode([0x71]) is HeatingMode.HOLIDAY
     assert hot_water.decode([0x71]) is HotWaterMode.TEMP
+
+
+@pytest.mark.parametrize(
+    "periods",
+    [
+        [(time(9, 15), time(10, 45))],
+        [(time(9, 0), time(10, 45))],
+        [(time(9, 15), time(10, 0))],
+    ],
+)
+def test_schedule_day_encode_rejects_non_half_hour_minutes(periods):
+    with pytest.raises(ValueError, match="multiple of 30"):
+        ScheduleDayField(0).encode(periods)
+
+
+def test_schedule_day_encode_accepts_half_hour_aligned_minutes():
+    periods = [(time(9, 0), time(10, 30)), (time(16, 30), time(0, 0))]
+    assert _day_intervals(ScheduleDayField(0).encode(periods)) == periods
 
 
 def test_boiler_type_field_decodes_known_and_unknown_codes():

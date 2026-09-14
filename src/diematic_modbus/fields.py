@@ -138,6 +138,15 @@ def _day_words(intervals: DaySchedule) -> list[int]:
     total = _SLOTS_PER_REGISTER * _REGISTERS_PER_DAY
     words = [0] * _REGISTERS_PER_DAY
     for start, end in intervals:
+        if start.minute % 30:
+            raise ValueError(
+                f"schedule start {start} has minute {start.minute}, "
+                "not a multiple of 30"
+            )
+        if end.minute % 30:
+            raise ValueError(
+                f"schedule end {end} has minute {end.minute}, not a multiple of 30"
+            )
         low = (start.hour * 60 + start.minute) // 30
         high = total if end == time(0, 0) else (end.hour * 60 + end.minute) // 30
         if not 0 <= low < high <= total:
