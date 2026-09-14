@@ -82,8 +82,6 @@ def test_boiler_type_field_decodes_known_and_unknown_codes():
     """boiler_type_field maps register 457 via MODEL_CODES, unknowns as raw ints."""
     field = boiler_type_field()
     assert field.address == 457
-    # The field wraps code_map with MODEL_CODES, so verify the conversion is wired.
-    # We exercise the converter directly to avoid the full Component read pipeline.
     assert field.convert(24) == "D4"
     assert field.convert(0) == "3-25LP"
-    assert field.convert(999) == 999  # unknown code preserved as raw int
+    assert field.convert(999) == 999
