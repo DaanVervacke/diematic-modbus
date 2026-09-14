@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import ClassVar
-
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, NumberField, bit, integer
 
-from ._base import _HEATING_MASK, _HOT_WATER_MASK, _Regulator
+from ._base import _HEATING_MASK, _HOT_WATER_MASK, ClockPolicy, _Regulator
 from .enums import (
     ActiveMode,
     DiematicVariant,
@@ -32,7 +30,6 @@ from .fields import (
 _MODE_A_ISYSTEM = 653
 _MODE_B_ISYSTEM = 659
 _MODE_C_ISYSTEM = 667
-_CLOCK_BASE = 679
 
 ISYSTEM_WINDOWS = (
     (8, 8),
@@ -339,8 +336,10 @@ class DiematicISystem(_Regulator):
 
     _mode_a_addr = _MODE_A_ISYSTEM
     _mode_b_addr = _MODE_B_ISYSTEM
+    _mode_c_addr = _MODE_C_ISYSTEM
     _hot_water_addrs = (_MODE_B_ISYSTEM,)
     _nudges_panel = False
+    _clock_policy = ClockPolicy(time_address=679, date_address=None, uses_marker=False)
 
     def __init__(
         self,
@@ -400,19 +399,3 @@ class DiematicISystem(_Regulator):
     def circuit_c_present(self) -> bool:
         """Whether circuit C reports a room temperature or is forced present."""
         return self._force_circuit_c or self.circuit_c.room_temp is not None
-
-    async def set_circuit_c_mode(self, mode: HeatingMode) -> None:
-        """Set heating circuit C mode. HOLIDAY is rejected as panel-only."""
-        await self._write_mode((_MODE_C_ISYSTEM,), _HEATING_MASK, HeatingMode, mode)
-
-    async def set_clock(self, moment: datetime) -> None:
-        """Set the regulator clock from ``moment``."""
-        block = [
-            moment.hour,
-            moment.minute,
-            moment.isoweekday(),
-            moment.day,
-            moment.month,
-            moment.year % 100,
-        ]
-        await self._unit.write_registers(_CLOCK_BASE, block)

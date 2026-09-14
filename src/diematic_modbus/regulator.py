@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from modbus_connection import ModbusUnit
 
-from ._base import _Regulator
+from ._base import ClockPolicy, _Regulator
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
 from .enums import DiematicVariant
 
-_CLOCK_TIME = 4
-_CLOCK_DATE = 108
-_CLOCK_FLAG = 0xFF00
 _READ_ONCE: frozenset[str] = frozenset()
 
 
 class Diematic(_Regulator):
     """A De Dietrich Diematic heating regulator on a Modbus unit."""
+
+    _clock_policy = ClockPolicy(time_address=4, date_address=108, uses_marker=True)
 
     def __init__(
         self,
@@ -59,18 +56,3 @@ class Diematic(_Regulator):
     def circuit_b_present(self) -> bool:
         """Whether circuit B reports a room temperature or is forced present."""
         return self._force_circuit_b or self.circuit_b.room_temp is not None
-
-    async def set_clock(self, moment: datetime) -> None:
-        """Set the regulator clock from ``moment``."""
-        time_block = [
-            _CLOCK_FLAG | (moment.hour & 0xFF),
-            _CLOCK_FLAG | (moment.minute & 0xFF),
-            _CLOCK_FLAG | (moment.isoweekday() & 0xFF),
-        ]
-        date_block = [
-            _CLOCK_FLAG | (moment.day & 0xFF),
-            _CLOCK_FLAG | (moment.month & 0xFF),
-            _CLOCK_FLAG | (moment.year % 100 & 0xFF),
-        ]
-        await self._unit.write_registers(_CLOCK_TIME, time_block)
-        await self._unit.write_registers(_CLOCK_DATE, date_block)
