@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import ClassVar
+
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, NumberField, bit, integer
 
