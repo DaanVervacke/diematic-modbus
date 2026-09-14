@@ -339,18 +339,18 @@ async def test_isystem_schedule_decodes_comfort_ranges(mock_modbus_unit):
     )
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.async_update()
-    week = boiler.schedules.circuit_a_p4
+    week = boiler.schedules.get_week("circuit_a_p4")
     assert week[1] == [(time(6, 0), time(8, 30))]
     assert week[2] == [(time(22, 0), time(0, 0))]
     assert week[3] == []
-    assert boiler.schedules.circuit_b_p4[1] == [(time(7, 0), time(20, 0))]
-    assert boiler.schedules.hot_water[1] == [
+    assert boiler.schedules.get_week("circuit_b_p4")[1] == [(time(7, 0), time(20, 0))]
+    assert boiler.schedules.get_week("hot_water")[1] == [
         (time(3, 0), time(9, 0)),
         (time(11, 30), time(12, 30)),
         (time(16, 0), time(22, 30)),
     ]
-    assert boiler.schedules.auxiliary[1] == [(time(6, 0), time(22, 0))]
-    assert boiler.schedules.circuit_c_p4[7] == []
+    assert boiler.schedules.get_week("auxiliary")[1] == [(time(6, 0), time(22, 0))]
+    assert boiler.schedules.get_week("circuit_c_p4")[7] == []
 
 
 @pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
@@ -369,9 +369,9 @@ async def test_isystem_schedule_decodes_all_on_and_all_off_days(
     )
     boiler = DiematicISystem(mock_modbus_unit)
 
-    await boiler.schedules.programs[schedule].async_update()
+    await boiler.schedules.async_update(schedule)
 
-    assert boiler.schedules.programs[schedule].week == {
+    assert boiler.schedules.get_week(schedule) == {
         1: [(time(0, 0), time(0, 0))],
         2: [],
         3: [],
@@ -380,6 +380,8 @@ async def test_isystem_schedule_decodes_all_on_and_all_off_days(
         6: [],
         7: [],
     }
+    assert boiler.schedules.get_day(schedule, 1) == [(time(0, 0), time(0, 0))]
+    assert boiler.schedules.get_day(schedule, 2) == []
 
 
 @pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
@@ -398,9 +400,9 @@ async def test_isystem_schedule_decodes_adjacent_days_independently(
     )
     boiler = DiematicISystem(mock_modbus_unit)
 
-    await boiler.schedules.programs[schedule].async_update()
+    await boiler.schedules.async_update(schedule)
 
-    week = boiler.schedules.programs[schedule].week
+    week = boiler.schedules.get_week(schedule)
     assert week[1] == [(time(0, 0), time(0, 30))]
     assert week[2] == [(time(0, 30), time(1, 0))]
     assert all(not week[day] for day in range(3, 8))
@@ -503,7 +505,7 @@ async def test_isystem_schedule_reads_all_days_as_three_register_blocks(
     boiler = DiematicISystem(mock_modbus_unit)
     mock_modbus_unit.read_events.clear()
 
-    await boiler.schedules.programs[schedule].async_update()
+    await boiler.schedules.async_update(schedule)
 
     assert [(event.address, event.count) for event in mock_modbus_unit.read_events] == [
         (base + 3 * day, 3) for day in range(7)

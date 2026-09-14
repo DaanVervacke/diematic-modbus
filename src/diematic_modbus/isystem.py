@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component, NumberField, bit, integer
@@ -47,7 +48,7 @@ ISYSTEM_WINDOWS = (
     (707, 744),
 )
 
-SCHEDULE_BASES = {
+_SCHEDULE_BASES = {
     "circuit_a_p4": 126,
     "circuit_b_p4": 147,
     "circuit_c_p4": 168,
@@ -70,7 +71,7 @@ _DAY_WINDOWS = tuple(
     (day * _DAY_STRIDE, day * _DAY_STRIDE + _DAY_STRIDE - 1) for day in range(_DAYS)
 )
 
-_READ_ONCE = frozenset(f"schedules.{name}" for name in SCHEDULE_BASES) | {"config"}
+_READ_ONCE = frozenset(f"schedules.{name}" for name in _SCHEDULE_BASES) | {"config"}
 
 _ZONE_DAY = snap_clamp(0.5, 10.0, 30.0)
 _ZONE_FROST = snap_clamp(0.5, 3.0, 20.0)
@@ -228,43 +229,35 @@ class WeekProgram(Component):
 class Schedules:
     """Heating P4, hot-water, and auxiliary schedules, writable one day at a time."""
 
+    SCHEDULE_BASES: ClassVar[dict[str, int]] = _SCHEDULE_BASES
+
     def __init__(self, unit: ModbusUnit) -> None:
         """Build one program bundle per exposed schedule block."""
-        self.programs = {
+        self._programs: dict[str, WeekProgram] = {
             name: WeekProgram(unit, base_offset=base)
-            for name, base in SCHEDULE_BASES.items()
+            for name, base in self.SCHEDULE_BASES.items()
         }
 
     async def set_day(self, schedule: str, weekday: int, periods: DaySchedule) -> None:
         """Write one weekday of a named schedule, keyed as the read properties are."""
-        if schedule not in self.programs:
+        if schedule not in self._programs:
             raise ValueError(f"unknown schedule {schedule!r}")
-        await self.programs[schedule].set_day(weekday, periods)
+        await self._programs[schedule].set_day(weekday, periods)
 
-    @property
-    def circuit_a_p4(self) -> WeekSchedule:
-        """Program P4 of heating circuit A."""
-        return self.programs["circuit_a_p4"].week
+    async def async_update(self, schedule: str) -> None:
+        """Poll one schedule by name. Replaces reaching into programs[name]."""
+        await self._programs[schedule].async_update()
 
-    @property
-    def circuit_b_p4(self) -> WeekSchedule:
-        """Program P4 of heating circuit B."""
-        return self.programs["circuit_b_p4"].week
+    def get_day(self, schedule: str, weekday: int) -> DaySchedule:
+        """Return the comfort periods for one weekday of one schedule."""
+        return self._programs[schedule].week[weekday]
 
-    @property
-    def circuit_c_p4(self) -> WeekSchedule:
-        """Program P4 of heating circuit C."""
-        return self.programs["circuit_c_p4"].week
+    def get_week(self, schedule: str) -> WeekSchedule:
+        """Return the full week's comfort periods for one schedule."""
+        return self._programs[schedule].week
 
-    @property
-    def hot_water(self) -> WeekSchedule:
-        """The hot-water comfort program."""
-        return self.programs["hot_water"].week
 
-    @property
-    def auxiliary(self) -> WeekSchedule:
-        """The auxiliary circuit comfort program."""
-        return self.programs["auxiliary"].week
+SCHEDULE_BASES = Schedules.SCHEDULE_BASES
 
 
 class Settings(ISystemComponent):
@@ -388,7 +381,7 @@ class DiematicISystem(_Regulator):
                 "identity": self.identity,
                 **{
                     f"schedules.{name}": program
-                    for name, program in self.schedules.programs.items()
+                    for name, program in self.schedules._programs.items()
                 },
             },
             _READ_ONCE,
