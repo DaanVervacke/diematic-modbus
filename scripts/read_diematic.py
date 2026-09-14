@@ -158,10 +158,10 @@ async def _main() -> int:
     parser = argparse.ArgumentParser(
         description="Read your Diematic boiler once for comparison with its panel.",
         epilog=(
-            "Nothing is written unless you add --probe-write. tcp (the default) "
-            "is plain Modbus TCP. Use --transport serial --framer rtu with a "
-            "socket:// target for an RTU-over-TCP serial server. "
-            "See README.md for setup and reporting results."
+            "Nothing is written unless you add --probe-write. A bare HOST:PORT "
+            "is treated as a serial-over-TCP gateway (auto-rewritten to "
+            "socket://HOST:PORT with --transport serial). Use tcp://HOST:PORT "
+            "for plain Modbus TCP. See README.md for setup and reporting results."
         ),
     )
     add_connection_args(parser, connections=(("tcp", "socket"), ("serial", "rtu")))
@@ -198,6 +198,12 @@ async def _main() -> int:
         ),
     )
     args = parser.parse_args()
+    if "://" not in args.target:
+        target = args.target
+        if ":" not in target and getattr(args, "port", None):
+            target = f"{target}:{args.port}"
+        args.target = f"socket://{target}"
+        args.transport = "serial"
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -221,8 +227,8 @@ async def _main() -> int:
         except ModbusError as err:
             print(f"Read failed: {err}")
             print("Check the connection settings and controller address (--unit).")
-            print("tcp targets a plain Modbus TCP gateway. A serial server needs")
-            print("--transport serial --framer rtu with a socket:// target.")
+            print("A bare HOST:PORT is auto-rewritten to socket://HOST:PORT and")
+            print("--transport serial. Use tcp://HOST:PORT for plain Modbus TCP.")
             print("Retry a read-only run after a timeout. Add --debug for details.")
             return 1
         if not complete:
