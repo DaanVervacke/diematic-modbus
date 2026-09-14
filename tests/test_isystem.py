@@ -422,6 +422,18 @@ async def test_isystem_schedule_reads_one_day_per_request(mock_modbus_unit):
         assert all(blocks.count((base + 3 * day, 3)) == 1 for day in range(7))
 
 
+async def test_isystem_set_day_refreshes_cached_schedule(mock_modbus_unit):
+    mock_modbus_unit.holding.update({147: 0x0000, 148: 0xC000, 149: 0x0000})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.schedules.circuit_b_p4[1] == [(time(8, 0), time(9, 0))]
+
+    await boiler.schedules.set_day("circuit_b_p4", 1, [(time(10, 0), time(11, 0))])
+    await boiler.async_update()
+
+    assert boiler.schedules.circuit_b_p4[1] == [(time(10, 0), time(11, 0))]
+
+
 async def test_isystem_pooled_and_read_once_reads_stay_inside_windows(
     mock_modbus_unit,
 ):

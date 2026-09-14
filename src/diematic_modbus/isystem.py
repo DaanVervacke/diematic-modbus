@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import ClassVar
 
 from modbus_connection import ModbusUnit
@@ -193,6 +194,7 @@ class WeekProgram(Component):
     """One weekly comfort program read as seven separate three-register days."""
 
     register_ranges = _DAY_WINDOWS
+    _on_day_written: Callable[[WeekProgram], None] | None = None
 
     monday = schedule_day(0, writable=True)
     tuesday = schedule_day(3, writable=True)
@@ -221,6 +223,8 @@ class WeekProgram(Component):
         if not 1 <= weekday <= _DAYS:
             raise ValueError(f"weekday must be 1 to {_DAYS}, got {weekday}")
         await self.write(_WEEKDAY_FIELDS[weekday - 1], periods)
+        if self._on_day_written is not None:
+            self._on_day_written(self)
 
 
 class Schedules:
@@ -385,6 +389,8 @@ class DiematicISystem(_Regulator):
             },
             _READ_ONCE,
         )
+        for program in self.schedules._programs.values():
+            program._on_day_written = self._invalidate_read_once
 
     @property
     def circuit_a_present(self) -> bool:
