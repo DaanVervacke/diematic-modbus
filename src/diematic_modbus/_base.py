@@ -13,7 +13,7 @@ from modbus_connection import (
     ModbusUnit,
     ServerDeviceBusyError,
 )
-from modbus_connection.model import Component, ComponentGroup
+from modbus_connection.model import Component, ComponentGroup, Raw
 
 from .enums import DiematicVariant, HeatingMode, HotWaterMode
 
@@ -123,7 +123,7 @@ class _Regulator:
                 updated.add(name)
                 del self._pending_once[name]
 
-    async def async_read_raw(self) -> dict[str, dict[int, int | bool]]:
+    async def async_read_raw(self) -> Raw:
         """Read mapped registers without updating decoded values."""
         group = ComponentGroup(self._unit, list(self._bundles.values()))
         return await group.async_read_raw(notify=False)
