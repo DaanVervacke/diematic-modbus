@@ -15,10 +15,10 @@ classifiers = [
     "Topic :: Home Automation",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["modbus-connection>=4.8.1,<5"]
+dependencies = ["modbus-connection>=4.12.1,<5"]
 
 [project.optional-dependencies]
-cli = ["modbus-connection[tmodbus]>=4.10.0,<5"]
+cli = ["modbus-connection[tmodbus]>=4.12.1,<5"]
 
 [project.urls]
 Homepage = "https://github.com/DaanVervacke/diematic-modbus"

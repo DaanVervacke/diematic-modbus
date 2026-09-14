@@ -6,8 +6,7 @@ from datetime import time
 from enum import IntEnum
 from typing import Any
 
-from modbus_connection.model import NumberField, RegisterField
-from modbus_connection.model.fields import WriteValidator
+from modbus_connection.model import NumberField, RegisterField, WriteValidator
 
 DaySchedule = list[tuple[time, time]]
 WeekSchedule = dict[int, DaySchedule]
