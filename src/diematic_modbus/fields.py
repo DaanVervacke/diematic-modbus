@@ -8,6 +8,8 @@ from typing import Any
 
 from modbus_connection.model import NumberField, RegisterField, WriteValidator
 
+from .models import MODEL_CODES
+
 DaySchedule = list[tuple[time, time]]
 WeekSchedule = dict[int, DaySchedule]
 _SLOTS_PER_REGISTER = 16
@@ -101,6 +103,11 @@ def fault_code(
 def code_map(address: int, table: dict[int, str]) -> NumberField[str | int]:
     """Map a register to a label from ``table``, unknown codes to the raw int."""
     return NumberField(address, signed=False, convert=_CodeLabel(table, frozenset()))
+
+
+def boiler_type_field() -> NumberField[str | int]:
+    """Read register 457 as a boiler model label, unknown codes kept as raw ints."""
+    return code_map(457, MODEL_CODES)
 
 
 def _slot_time(slot: int) -> time:

@@ -6,8 +6,7 @@ from modbus_connection.model import Component, bit, integer
 
 from .enums import HeatingMode, HotWaterMode, HotWaterPriority
 from .faults import MODULENS_FAULTS
-from .fields import code_map, fault_code, float10, masked_enum, snap_clamp
-from .models import MODEL_CODES
+from .fields import boiler_type_field, fault_code, float10, masked_enum, snap_clamp
 
 HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472))
 
@@ -102,7 +101,7 @@ class Identity(DiematicComponent):
     """Regulator identity and clock registers."""
 
     controller = integer(3, signed=False)
-    boiler_type = code_map(457, MODEL_CODES)
+    boiler_type = boiler_type_field()
     hour = integer(4, signed=False)
     minute = integer(5, signed=False)
     weekday = integer(6, signed=False)
