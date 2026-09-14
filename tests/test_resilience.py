@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from modbus_connection import (
     ModbusConnectionError,
@@ -206,3 +208,28 @@ async def test_isystem_unknown_hot_water_and_active_modes(mock_modbus_unit):
     mock_modbus_unit.holding[659] = 0x58
     await boiler.async_update()
     assert boiler.hot_water.mode is HotWaterMode.TEMP
+
+
+async def test_concurrent_mode_writes_are_serialised(mock_modbus_unit):
+    mock_modbus_unit.holding[659] = 0x08
+    boiler = DiematicISystem(mock_modbus_unit)
+    original_read = mock_modbus_unit.read_holding_registers
+    original_write = mock_modbus_unit.write_registers
+
+    async def yielding_read(address: int, count: int) -> list[int]:
+        await asyncio.sleep(0)
+        return await original_read(address, count)
+
+    async def yielding_write(address: int, values: list[int]) -> None:
+        await asyncio.sleep(0)
+        await original_write(address, values)
+
+    mock_modbus_unit.read_holding_registers = yielding_read
+    mock_modbus_unit.write_registers = yielding_write
+    await asyncio.gather(
+        boiler.set_circuit_b_mode(HeatingMode.TEMP_DAY),
+        boiler.set_hot_water_mode(HotWaterMode.PERM),
+    )
+    word = mock_modbus_unit.holding[659]
+    assert word & 0x2F == int(HeatingMode.TEMP_DAY)
+    assert word & 0x50 == int(HotWaterMode.PERM)
