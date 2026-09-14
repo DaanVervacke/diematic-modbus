@@ -445,6 +445,57 @@ async def test_isystem_pooled_and_read_once_reads_stay_inside_windows(
         )
 
 
+async def test_isystem_each_window_read_without_crossing_gaps(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+
+    schedule_days = {
+        (base + 3 * day, 3) for base in SCHEDULE_BASES.values() for day in range(7)
+    }
+    blocks = [
+        (event.address, event.count)
+        for event in mock_modbus_unit.read_events
+        if event.register_type == "holding"
+        and (event.address, event.count) not in schedule_days
+    ]
+    assert blocks
+    for start, count in blocks:
+        end = start + count - 1
+        assert (
+            sum(
+                window_start <= start and end <= window_end
+                for window_start, window_end in ISYSTEM_WINDOWS
+            )
+            == 1
+        )
+    for window_start, window_end in ISYSTEM_WINDOWS:
+        assert any(
+            window_start <= start and end <= window_end
+            for start, count in blocks
+            for end in (start + count - 1,)
+        )
+
+
+async def test_isystem_group_planning_uses_declared_windows(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    for component in (
+        boiler.sensors,
+        boiler.hot_water,
+        boiler.circuit_a,
+        boiler.circuit_b,
+        boiler.circuit_c,
+        boiler.settings,
+        boiler.config,
+        boiler.diagnostics,
+        boiler.identity,
+    ):
+        assert component.register_ranges == ISYSTEM_WINDOWS
+        assert component._resolved_ranges().for_space("holding") == ISYSTEM_WINDOWS
+    assert boiler._poll_group._ranges.for_space("holding") == ISYSTEM_WINDOWS
+
+
 @pytest.mark.parametrize("schedule, base", SCHEDULE_BASES.items())
 async def test_isystem_schedule_reads_all_days_as_three_register_blocks(
     mock_modbus_unit, schedule, base
