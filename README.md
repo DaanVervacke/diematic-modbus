@@ -396,17 +396,18 @@ for your installation.
 
 ### Work with schedules
 
-On iSystem, `boiler.schedules.circuit_b_p4` returns a dictionary keyed by
-weekday, 1 for Monday through 7 for Sunday. Each day contains pairs of
-`datetime.time` values for its comfort periods, in half-hour steps.
+On iSystem, `boiler.schedules.get_week("circuit_b_p4")` returns a dictionary
+keyed by weekday, 1 for Monday through 7 for Sunday. Each day contains pairs
+of `datetime.time` values for its comfort periods, in half-hour steps.
 For example, Monday might contain `[(time(6, 0), time(8, 0))]`.
+`boiler.schedules.get_day("circuit_b_p4", 1)` returns one weekday only.
 
 An interval ending at `time(0, 0)` runs to the end of that day. An all-day
 period is `(time(0, 0), time(0, 0))`. An empty list means no comfort periods
 only after a successful read. Before then, missing days also appear empty.
 Check the initial update report before interpreting a schedule.
 
-The other properties are `circuit_a_p4`, `circuit_c_p4`, `hot_water`, and
+The other schedule names are `circuit_a_p4`, `circuit_c_p4`, `hot_water`, and
 `auxiliary`. Each schedule is reported separately, for example as
 `schedules.circuit_b_p4` in `report.updated` or `report.failed`.
 `boiler.circuit_b.program` separately reports the selected program, 1 to 4.
@@ -422,8 +423,8 @@ await boiler.schedules.set_day(
 )
 ```
 
-`set_day` takes the weekday, 1 for Monday through 7 for Sunday, and the same
-list of `datetime.time` pairs that a read returns. It writes that day's three
+`set_day` takes the schedule name, weekday, and the same list of
+`datetime.time` pairs that a read returns. It writes that day's three
 registers. An interval ending at `time(0, 0)` runs to the end of the day, and
 an empty list clears the day. This edits the stored P4 program, which drives
 the boiler only while P4 is the selected program. Program selection is not

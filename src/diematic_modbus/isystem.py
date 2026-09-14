@@ -240,7 +240,7 @@ class Schedules:
         }
 
     async def set_day(self, schedule: str, weekday: int, periods: DaySchedule) -> None:
-        """Write one weekday of a named schedule, keyed as the read properties are."""
+        """Write one weekday of a named schedule. Unknown schedule raises ValueError."""
         if schedule not in self._programs:
             raise ValueError(f"unknown schedule {schedule!r}")
         await self._programs[schedule].set_day(weekday, periods)
