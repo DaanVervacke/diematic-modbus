@@ -73,7 +73,7 @@ def _format_range(start: time, end: time) -> str:
 def _print_schedules(boiler: DiematicISystem) -> None:
     """Print the weekly comfort schedules, one line per weekday."""
     for name in SCHEDULE_BASES:
-        week = getattr(boiler.schedules, name)
+        week = boiler.schedules.get_week(name)
         title = f"{name.replace('_', ' ').title()} schedule (schedules.{name})"
         print(f"\n{title}")
         print("-" * len(title))
