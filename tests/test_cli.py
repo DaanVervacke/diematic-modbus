@@ -174,3 +174,38 @@ async def test_connection_failures_and_cleanup(
         close.assert_not_awaited()
     else:
         close.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("192.168.1.50:502", "socket://192.168.1.50:502"),
+        ("192.168.1.50", "socket://192.168.1.50:502"),
+    ],
+)
+async def test_bare_target_rewrites_to_socket_with_serial_transport(
+    script, mock_modbus_unit, monkeypatch, target, expected
+):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["read_diematic.py", target, "--port", "502", "--layout", "isystem"],
+    )
+    assert await script._main() == 0
+    args = script.connect_from_args.call_args.args[0]
+    assert args.target == expected
+    assert args.transport == "serial"
+    script.connect_from_args.return_value.close.assert_awaited_once()
+
+
+async def test_explicit_socket_target_is_not_double_prefixed(
+    script, mock_modbus_unit, monkeypatch
+):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["read_diematic.py", "socket://192.168.1.50:502", "--layout", "isystem"],
+    )
+    assert await script._main() == 0
+    args = script.connect_from_args.call_args.args[0]
+    assert args.target == "socket://192.168.1.50:502"
+    assert args.transport == "tcp"
+    script.connect_from_args.return_value.close.assert_awaited_once()
