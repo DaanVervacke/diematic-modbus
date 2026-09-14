@@ -358,8 +358,9 @@ Constructor options such as `force_circuit_b=True` override that flag only.
 They do not add hardware support or change which registers are read or written.
 
 For debugging, `async_read_raw()` reads the registers mapped by the library
-without decoding them or updating the saved field values. It includes cached
-groups but is not a scan of every address the boiler might support.
+and returns them without decoding, though the saved field values can still be
+refreshed as a side effect. It includes cached groups but is not a scan of
+every address the boiler might support.
 
 ### Change settings
 

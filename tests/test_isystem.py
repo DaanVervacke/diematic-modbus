@@ -537,3 +537,13 @@ async def test_isystem_read_raw_covers_schedule_blocks(mock_modbus_unit):
     raw = await boiler.async_read_raw()
 
     assert raw["holding"].items() >= expected.items()
+
+
+async def test_isystem_read_raw_refreshes_decoded_cache(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    assert boiler.sensors.boiler_temp is None
+
+    await boiler.async_read_raw()
+
+    assert boiler.sensors.boiler_temp == 65.0

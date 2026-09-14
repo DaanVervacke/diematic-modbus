@@ -140,7 +140,7 @@ class _Regulator:
                 del self._pending_once[name]
 
     async def async_read_raw(self) -> Raw:
-        """Read mapped registers without updating decoded values."""
+        """Read mapped registers raw, refreshing decoded values as a side effect."""
         group = ComponentGroup(self._unit, list(self._bundles.values()))
         return await group.async_read_raw(notify=False)
 
