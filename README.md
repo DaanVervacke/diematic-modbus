@@ -87,8 +87,12 @@ You need Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), a copy of this
 repository, and a working connection to the controller's Modbus port.
 
 The script supports plain Modbus TCP, RTU-over-TCP serial servers, and direct
-serial adapters. Plain Modbus TCP is the default network mode. An
-RTU-over-TCP server needs `--transport serial --framer rtu` and a
+serial adapters. A bare `HOST:PORT` target names a serial-over-TCP gateway,
+such as a Waveshare RS485-to-TCP adapter. The script rewrites it to
+`socket://HOST:PORT` with `--transport serial`, so older examples that passed
+a bare host and port now reach the serial framing those gateways need. Plain
+Modbus TCP is not the default, so use an explicit `tcp://HOST:PORT` target
+for it. An RTU-over-TCP server needs `--transport serial --framer rtu` and a
 `socket://` target. You need the gateway's address and port, or your serial
 adapter's device path, plus the controller's Modbus address.
 
@@ -105,15 +109,23 @@ script. You do not need to install this package globally.
 
 ### Run a read-only test
 
-For an iSystem panel through a plain Modbus TCP gateway:
+For an iSystem panel behind a serial-over-TCP gateway, such as a Waveshare
+RS485-to-TCP adapter:
 
 ```shell
-uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 --unit 10 --layout isystem
+uv run --extra cli scripts/read_diematic.py 192.168.1.50:502 --unit 10 --layout isystem
 ```
 
-Replace `192.168.1.50` and `502` with your gateway's address and port. Replace
-`10` if your controller uses a different Modbus address. These are examples,
-not values the script can discover for you.
+A bare `HOST:PORT` is rewritten to `socket://HOST:PORT` with `--transport
+serial`. Replace `192.168.1.50` and `502` with your gateway's address and
+port. Replace `10` if your controller uses a different Modbus address. These
+are examples, not values the script can discover for you.
+
+For a plain Modbus TCP gateway, use an explicit `tcp://` target:
+
+```shell
+uv run --extra cli scripts/read_diematic.py tcp://192.168.1.50:502 --unit 10 --layout isystem
+```
 
 For an RTU-over-TCP serial server, use a `socket://` target and RTU framing:
 
