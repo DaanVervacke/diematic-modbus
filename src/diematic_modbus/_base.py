@@ -65,6 +65,7 @@ class _Regulator:
     _poll: list[Component]
     _poll_group: ComponentGroup
     _names: dict[int, str]
+    _read_once: frozenset[str]
     _pending_once: dict[str, Component]
     _write_lock: asyncio.Lock
 
@@ -82,6 +83,7 @@ class _Regulator:
         self._poll = [c for n, c in bundles.items() if n not in read_once]
         self._poll_group = ComponentGroup(unit, self._poll)
         self._names = {id(c): n for n, c in bundles.items()}
+        self._read_once = read_once
         self._pending_once = {n: bundles[n] for n in read_once}
 
     async def async_update(self) -> UpdateReport:
@@ -140,9 +142,15 @@ class _Regulator:
                 del self._pending_once[name]
 
     async def async_read_raw(self) -> Raw:
-        """Read mapped registers without updating decoded values."""
+        """Read mapped registers raw, refreshing decoded values as a side effect."""
         group = ComponentGroup(self._unit, list(self._bundles.values()))
         return await group.async_read_raw(notify=False)
+
+    def _invalidate_read_once(self, component: Component) -> None:
+        """Re-arm a cached read-once bundle so the next update rereads it."""
+        name = self._names[id(component)]
+        if name in self._read_once:
+            self._pending_once[name] = self._bundles[name]
 
     async def set_circuit_a_mode(self, mode: HeatingMode) -> None:
         """Set heating circuit A mode, rejecting HOLIDAY as panel-only."""

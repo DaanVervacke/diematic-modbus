@@ -358,8 +358,9 @@ Constructor options such as `force_circuit_b=True` override that flag only.
 They do not add hardware support or change which registers are read or written.
 
 For debugging, `async_read_raw()` reads the registers mapped by the library
-without decoding them or updating the saved field values. It includes cached
-groups but is not a scan of every address the boiler might support.
+and returns them without decoding, though the saved field values can still be
+refreshed as a side effect. It includes cached groups but is not a scan of
+every address the boiler might support.
 
 ### Change settings
 
@@ -379,7 +380,8 @@ await boiler.set_hot_water_mode(HotWaterMode.AUTO)
 
 Use `write()` for writable numeric fields and `set_*_mode()` for modes.
 Heating and hot-water modes share storage, so the mode methods preserve
-the other setting's bits. Make mode changes sequentially, not concurrently.
+the other setting's bits. Mode changes are serialized internally, but
+sequential calls are simpler to reason about.
 The setters still attempt a write if a circuit's presence flag is false,
 and a boiler can reject a write or fail to retain it.
 

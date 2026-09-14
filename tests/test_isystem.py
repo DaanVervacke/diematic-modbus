@@ -422,6 +422,18 @@ async def test_isystem_schedule_reads_one_day_per_request(mock_modbus_unit):
         assert all(blocks.count((base + 3 * day, 3)) == 1 for day in range(7))
 
 
+async def test_isystem_set_day_refreshes_cached_schedule(mock_modbus_unit):
+    mock_modbus_unit.holding.update({147: 0x0000, 148: 0xC000, 149: 0x0000})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.schedules.get_week("circuit_b_p4")[1] == [(time(8, 0), time(9, 0))]
+
+    await boiler.schedules.set_day("circuit_b_p4", 1, [(time(10, 0), time(11, 0))])
+    await boiler.async_update()
+
+    assert boiler.schedules.get_week("circuit_b_p4")[1] == [(time(10, 0), time(11, 0))]
+
+
 async def test_isystem_pooled_and_read_once_reads_stay_inside_windows(
     mock_modbus_unit,
 ):
@@ -537,3 +549,13 @@ async def test_isystem_read_raw_covers_schedule_blocks(mock_modbus_unit):
     raw = await boiler.async_read_raw()
 
     assert raw["holding"].items() >= expected.items()
+
+
+async def test_isystem_read_raw_refreshes_decoded_cache(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    assert boiler.sensors.boiler_temp is None
+
+    await boiler.async_read_raw()
+
+    assert boiler.sensors.boiler_temp == 65.0
