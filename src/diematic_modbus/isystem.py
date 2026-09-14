@@ -239,23 +239,31 @@ class Schedules:
             for name, base in self.SCHEDULE_BASES.items()
         }
 
-    async def set_day(self, schedule: str, weekday: int, periods: DaySchedule) -> None:
-        """Write one weekday of a named schedule. Unknown schedule raises ValueError."""
+    def _require_schedule(self, schedule: str) -> WeekProgram:
+        """Return the program for a known schedule. Raise ValueError on unknown name."""
         if schedule not in self._programs:
             raise ValueError(f"unknown schedule {schedule!r}")
-        await self._programs[schedule].set_day(weekday, periods)
+        return self._programs[schedule]
+
+    def bundles(self) -> dict[str, WeekProgram]:
+        """Return the schedule-name to WeekProgram map for engine registration."""
+        return self._programs
+
+    async def set_day(self, schedule: str, weekday: int, periods: DaySchedule) -> None:
+        """Write one weekday of a named schedule."""
+        await self._require_schedule(schedule).set_day(weekday, periods)
 
     async def async_update(self, schedule: str) -> None:
-        """Poll one schedule by name. Replaces reaching into programs[name]."""
-        await self._programs[schedule].async_update()
+        """Poll one schedule by name."""
+        await self._require_schedule(schedule).async_update()
 
     def get_day(self, schedule: str, weekday: int) -> DaySchedule:
-        """Return the comfort periods for one weekday of one schedule."""
-        return self._programs[schedule].week[weekday]
+        """Return the comfort periods for one weekday."""
+        return self._require_schedule(schedule).week[weekday]
 
     def get_week(self, schedule: str) -> WeekSchedule:
-        """Return the full week's comfort periods for one schedule."""
-        return self._programs[schedule].week
+        """Return the comfort periods for one week."""
+        return self._require_schedule(schedule).week
 
 
 SCHEDULE_BASES = Schedules.SCHEDULE_BASES
@@ -384,7 +392,7 @@ class DiematicISystem(_Regulator):
                 "identity": self.identity,
                 **{
                     f"schedules.{name}": program
-                    for name, program in self.schedules._programs.items()
+                    for name, program in self.schedules.bundles().items()
                 },
             },
             _READ_ONCE,

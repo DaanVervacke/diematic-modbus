@@ -109,6 +109,16 @@ async def test_isystem_schedules_set_day_rejects_unknown_schedule(mock_modbus_un
         await boiler.schedules.set_day("nope", 1, [])
 
 
+async def test_isystem_schedules_read_paths_reject_unknown_schedule(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    with pytest.raises(ValueError, match="unknown schedule"):
+        boiler.schedules.get_week("nope")
+    with pytest.raises(ValueError, match="unknown schedule"):
+        boiler.schedules.get_day("nope", 1)
+    with pytest.raises(ValueError, match="unknown schedule"):
+        await boiler.schedules.async_update("nope")
+
+
 async def test_isystem_set_day_rejects_bad_weekday(mock_modbus_unit):
     boiler = DiematicISystem(mock_modbus_unit)
     with pytest.raises(ValueError, match="weekday"):
