@@ -380,7 +380,8 @@ await boiler.set_hot_water_mode(HotWaterMode.AUTO)
 
 Use `write()` for writable numeric fields and `set_*_mode()` for modes.
 Heating and hot-water modes share storage, so the mode methods preserve
-the other setting's bits. Make mode changes sequentially, not concurrently.
+the other setting's bits. Mode changes are serialized internally, but
+sequential calls are simpler to reason about.
 The setters still attempt a write if a circuit's presence flag is false,
 and a boiler can reject a write or fail to retain it.
 
