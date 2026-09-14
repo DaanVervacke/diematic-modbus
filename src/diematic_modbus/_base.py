@@ -33,8 +33,8 @@ class ClockPolicy:
     """Where and how to write the regulator clock."""
 
     time_address: int
-    date_address: int | None  # None when time and date share one register block.
-    uses_marker: bool  # True for Diematic (0xFF00 marker per word).
+    date_address: int | None
+    uses_marker: bool
 
 
 @dataclass(frozen=True)
@@ -156,7 +156,7 @@ class _Regulator:
         """Set heating circuit C mode. HOLIDAY is rejected as panel-only."""
         if self._mode_c_addr is None:
             raise AttributeError(
-                f"{type(self).__name__} has no circuit C; only iSystem does"
+                f"{type(self).__name__} has no circuit C. Only iSystem does."
             )
         await self._write_mode((self._mode_c_addr,), _HEATING_MASK, HeatingMode, mode)
 
