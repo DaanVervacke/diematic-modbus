@@ -174,6 +174,31 @@ async def test_circuit_presence_follows_room_temp(mock_modbus_unit):
     assert diematic.circuit_b_present is False
 
 
+async def test_hot_water_presence_follows_temperature(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.async_update()
+    assert diematic.hot_water_present is True
+
+    mock_modbus_unit.holding[62] = 0xFFFF
+    mock_modbus_unit.holding[459] = 505
+    await diematic.async_update()
+    assert diematic.hot_water_present is True
+
+    mock_modbus_unit.holding[459] = 0xFFFF
+    await diematic.async_update()
+    assert diematic.hot_water_present is False
+
+
+async def test_hot_water_zero_temperature_counts_as_present(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding[62] = 0
+    mock_modbus_unit.holding[459] = 0xFFFF
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.async_update()
+    assert diematic.hot_water_present is True
+
+
 async def test_force_circuit_b_overrides_absent_sensor(mock_modbus_unit):
     _seed(mock_modbus_unit)
     diematic = Diematic(mock_modbus_unit, force_circuit_b=True)

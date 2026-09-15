@@ -430,3 +430,8 @@ class DiematicISystem(_Regulator):
             or self.circuit_c.room_temp is not None
             or self.circuit_c.calc_temp is not None
         )
+
+    @property
+    def hot_water_present(self) -> bool:
+        """Whether hot water reports a live temperature sensor reading."""
+        return self.hot_water.temp is not None
