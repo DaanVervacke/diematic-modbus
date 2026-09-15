@@ -402,15 +402,31 @@ class DiematicISystem(_Regulator):
 
     @property
     def circuit_a_present(self) -> bool:
-        """Whether circuit A reports a room temperature or is forced present."""
-        return self._force_circuit_a or self.circuit_a.room_temp is not None
+        """Whether circuit A reports any live sensor reading or is forced present."""
+        return (
+            self._force_circuit_a
+            or self.circuit_a.room_temp is not None
+            or self.circuit_a.calc_temp is not None
+            or self.circuit_a.supply_temp is not None
+        )
 
     @property
     def circuit_b_present(self) -> bool:
-        """Whether circuit B reports a room temperature or is forced present."""
-        return self._force_circuit_b or self.circuit_b.room_temp is not None
+        """Whether circuit B reports any live sensor reading or is forced present."""
+        return (
+            self._force_circuit_b
+            or self.circuit_b.room_temp is not None
+            or self.circuit_b.calc_temp is not None
+            or self.circuit_b.supply_temp is not None
+            or self.circuit_b.min_temp is not None
+            or self.circuit_b.max_temp is not None
+        )
 
     @property
     def circuit_c_present(self) -> bool:
-        """Whether circuit C reports a room temperature or is forced present."""
-        return self._force_circuit_c or self.circuit_c.room_temp is not None
+        """Whether circuit C reports any live sensor reading or is forced present."""
+        return (
+            self._force_circuit_c
+            or self.circuit_c.room_temp is not None
+            or self.circuit_c.calc_temp is not None
+        )
