@@ -70,6 +70,67 @@ def _format_range(start: time, end: time) -> str:
     return f"{start.strftime('%H:%M')}-{tail}"
 
 
+def _sensor_value(circuit, sensor_name: str) -> str:
+    """Format one sensor's value with its unit, or 'absent' for sentinel."""
+    value = getattr(circuit, sensor_name)
+    if value is None:
+        return "absent"
+    field = getattr(type(circuit), sensor_name, None)
+    unit = getattr(field, "unit", None) if field is not None else None
+    return f"{value} {unit}".strip() if unit else str(value)
+
+
+def _print_presence(regulator: Regulator) -> None:
+    """Print per-circuit sensor evidence and trigger reason."""
+    if isinstance(regulator, DiematicISystem):
+        forced_map = {
+            "circuit_a": regulator._force_circuit_a,
+            "circuit_b": regulator._force_circuit_b,
+            "circuit_c": regulator._force_circuit_c,
+        }
+        sensors_map = {
+            "circuit_a": ("room_temp", "calc_temp", "supply_temp"),
+            "circuit_b": (
+                "room_temp",
+                "calc_temp",
+                "supply_temp",
+                "min_temp",
+                "max_temp",
+            ),
+            "circuit_c": ("room_temp", "calc_temp"),
+        }
+    else:
+        forced_map = {
+            "circuit_a": regulator._force_circuit_a,
+            "circuit_b": regulator._force_circuit_b,
+        }
+        sensors_map = {
+            "circuit_a": ("room_temp", "calc_temp"),
+            "circuit_b": (
+                "room_temp",
+                "calc_temp",
+                "supply_temp",
+                "min_temp",
+                "max_temp",
+            ),
+        }
+    print("\nPresence check (any non-sentinel sensor reading or forced override):")
+    for name, sensor_names in sensors_map.items():
+        circuit = getattr(regulator, name)
+        live = [n for n in sensor_names if getattr(circuit, n) is not None]
+        is_forced = forced_map[name]
+        is_present = getattr(regulator, f"{name}_present")
+        if is_forced:
+            reason = "forced"
+        elif live:
+            reason = f"live: {live[0]}"
+        else:
+            reason = "all sensors sentinel"
+        print(f"  {name}_present = {is_present} ({reason})")
+        for sensor in sensor_names:
+            print(f"    {sensor} = {_sensor_value(circuit, sensor)}")
+
+
 def _print_schedules(boiler: DiematicISystem) -> None:
     """Print the weekly comfort schedules, one line per weekday."""
     for name in SCHEDULE_BASES:
@@ -197,6 +258,14 @@ async def _main() -> int:
             "leave it unchanged (real write, uses iSystem when --layout both)"
         ),
     )
+    parser.add_argument(
+        "--check-presence",
+        action="store_true",
+        help=(
+            "print per-sensor presence evidence and the trigger reason for each "
+            "circuit presence bool (no extra writes)"
+        ),
+    )
     args = parser.parse_args()
     if "://" not in args.target:
         target = args.target
@@ -224,6 +293,8 @@ async def _main() -> int:
             for kind, regulator in regulators:
                 if not await _dump(kind, regulator):
                     complete = False
+                if args.check_presence:
+                    _print_presence(regulator)
         except ModbusError as err:
             print(f"Read failed: {err}")
             print("Check the connection settings and controller address (--unit).")
