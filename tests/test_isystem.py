@@ -284,6 +284,25 @@ async def test_isystem_circuit_presence_follows_room_temp(mock_modbus_unit):
     assert boiler.circuit_c_present is True
 
 
+async def test_isystem_hot_water_presence_follows_temperature(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.hot_water_present is True
+
+    mock_modbus_unit.holding[603] = 0xFFFF
+    await boiler.async_update()
+    assert boiler.hot_water_present is False
+
+
+async def test_isystem_hot_water_zero_temperature_counts_as_present(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding[603] = 0
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.hot_water_present is True
+
+
 async def test_isystem_heating_mode_writes_to_zone_b_register(mock_modbus_unit):
     mock_modbus_unit.holding[659] = 0x58
     boiler = DiematicISystem(mock_modbus_unit)

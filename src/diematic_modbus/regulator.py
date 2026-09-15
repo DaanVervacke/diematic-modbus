@@ -67,3 +67,8 @@ class Diematic(_Regulator):
             or self.circuit_b.min_temp is not None
             or self.circuit_b.max_temp is not None
         )
+
+    @property
+    def hot_water_present(self) -> bool:
+        """Whether hot water reports any live temperature sensor reading."""
+        return self.hot_water.temp is not None or self.hot_water.temp_dpsm is not None
