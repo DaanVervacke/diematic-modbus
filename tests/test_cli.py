@@ -209,3 +209,34 @@ async def test_explicit_socket_target_is_not_double_prefixed(
     assert args.target == "socket://192.168.1.50:502"
     assert args.transport == "tcp"
     script.connect_from_args.return_value.close.assert_awaited_once()
+
+
+async def test_raw_range_reads_exact_words_without_writes(
+    script, mock_modbus_unit, monkeypatch, capsys
+):
+    mock_modbus_unit.holding.update({457: 24, 710: 5, 711: 7})
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "read_diematic.py",
+            "mock",
+            "--layout",
+            "isystem",
+            "--raw-range",
+            "457",
+            "1",
+            "--raw-range",
+            "710",
+            "2",
+        ],
+    )
+    writes = []
+    mock_modbus_unit.on_write(writes.append)
+
+    assert await script._main() == 0
+
+    output = capsys.readouterr().out
+    assert "457-457: 0x0018" in output
+    assert "710-711: 0x0005 0x0007" in output
+    assert writes == []
+    script.connect_from_args.return_value.close.assert_awaited_once()

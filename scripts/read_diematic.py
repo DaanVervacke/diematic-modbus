@@ -131,6 +131,23 @@ def _print_presence(regulator: Regulator) -> None:
             print(f"    {sensor} = {_sensor_value(circuit, sensor)}")
 
 
+async def _read_raw_ranges(unit: ModbusUnit, ranges: list[list[int]]) -> bool:
+    """Read and print exact holding-register ranges without decoding or writing."""
+    complete = True
+    print("\nRaw holding-register probes")
+    print("---------------------------")
+    for start, count in ranges:
+        try:
+            values = await unit.read_holding_registers(start, count)
+        except ModbusError as err:
+            complete = False
+            print(f"  {start}-{start + count - 1}: ERROR {err}")
+        else:
+            shown = " ".join(f"0x{value:04X}" for value in values)
+            print(f"  {start}-{start + count - 1}: {shown}")
+    return complete
+
+
 def _print_schedules(boiler: DiematicISystem) -> None:
     """Print the weekly comfort schedules, one line per weekday."""
     for name in SCHEDULE_BASES:
@@ -266,6 +283,17 @@ async def _main() -> int:
             "circuit presence bool (no extra writes)"
         ),
     )
+    parser.add_argument(
+        "--raw-range",
+        action="append",
+        nargs=2,
+        type=int,
+        metavar=("START", "COUNT"),
+        help=(
+            "read an exact holding-register range and print raw words; repeat "
+            "for multiple probes (read-only)"
+        ),
+    )
     args = parser.parse_args()
     if "://" not in args.target:
         target = args.target
@@ -295,6 +323,8 @@ async def _main() -> int:
                     complete = False
                 if args.check_presence:
                     _print_presence(regulator)
+            if args.raw_range and not await _read_raw_ranges(unit, args.raw_range):
+                complete = False
         except ModbusError as err:
             print(f"Read failed: {err}")
             print("Check the connection settings and controller address (--unit).")
