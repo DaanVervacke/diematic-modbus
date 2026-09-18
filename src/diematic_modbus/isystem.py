@@ -29,6 +29,7 @@ from .fields import (
     fault_code,
     float10,
     masked_enum,
+    multiplied_integer,
     schedule_day,
     snap_clamp,
     time_program,
@@ -322,7 +323,7 @@ class Config(ISystemComponent):
     three_way_valve_shift = float10(267)
     min_running_time = integer(269, signed=False)
     burner_temporisation = integer(271, signed=False)
-    pump_postrun = integer(272, signed=False)
+    pump_postrun = multiplied_integer(272, 2, unit="min")
     outside_calibration = float10(274, unit="°C")
     zone_a_calibration = float10(275, unit="°C")
     zone_b_calibration = float10(276, unit="°C")

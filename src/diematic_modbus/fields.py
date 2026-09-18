@@ -117,6 +117,13 @@ def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[floa
     )
 
 
+def multiplied_integer(address: int, multiplier: int, *, unit: str) -> NumberField[int]:
+    """Read an unsigned integer multiplied by a fixed factor."""
+    return NumberField(
+        address, signed=False, convert=lambda raw: raw * multiplier, unit=unit
+    )
+
+
 def positive_float10(value: Any) -> float:
     """Validate a nonnegative tenths value for a controller write."""
     result = float(value)

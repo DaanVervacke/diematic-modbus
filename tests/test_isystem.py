@@ -201,6 +201,7 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
             276: 0x8010,
             289: 350,
             291: 150,
+            272: 2,
             296: 1,
             297: 2,
             360: 5,
@@ -218,6 +219,7 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     await boiler.async_update()
     assert boiler.settings.language is Language.SPANISH
     assert boiler.config.bandwidth == 12.0
+    assert boiler.config.pump_postrun == 4
     assert boiler.config.zone_b_calibration == -1.6
     assert boiler.config.footprint_a_day == 35.0
     assert boiler.config.footprint_b_day is None

@@ -598,7 +598,7 @@ as numbers rather than inventing an explanation.
 | Automatic adjustment values for A/B/C | `autoadapt_a`, `autoadapt_b`, `autoadapt_c` |
 | Language code and building-inertia setting | `language`, `building_inertia` |
 | Control bandwidth and mixing-valve adjustment | `bandwidth`, `three_way_valve_shift` |
-| Minimum running time, burner delay and pump run-on settings, without defined time units | `min_running_time`, `burner_temporisation`, `pump_postrun` |
+| Minimum running time, burner delay and pump run-on settings | `min_running_time`, `burner_temporisation`, `pump_postrun` |
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
 | A/B/C anticipation settings, without defined units | `anticipation_a`, `anticipation_b`, `anticipation_c` |
 | Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
