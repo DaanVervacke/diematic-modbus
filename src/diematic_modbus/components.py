@@ -41,6 +41,7 @@ class Sensors(DiematicComponent):
     """Boiler and system sensor readings."""
 
     outdoor_temp = float10(7, unit="°C")
+    mean_outside_temp = float10(102, unit="°C")
     outdoor_temp_bus = float10(470, unit="°C")
     boiler_temp = float10(75, unit="°C")
     boiler_temp_dpsm = float10(452, unit="°C")

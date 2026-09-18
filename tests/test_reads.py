@@ -11,6 +11,7 @@ def _seed(unit: MockModbusUnit) -> None:
             4: 14,
             5: 30,
             7: 205,
+            102: 175,
             14: 550,
             17: 0x58,
             18: 210,
@@ -47,6 +48,7 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     await diematic.async_update()
 
     assert diematic.sensors.outdoor_temp == 20.5
+    assert diematic.sensors.mean_outside_temp == 17.5
     assert diematic.sensors.boiler_temp == 65.0
     assert diematic.sensors.return_temp is None
     assert diematic.sensors.water_pressure == 1.5
