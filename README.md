@@ -446,6 +446,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | --- | --- | --- |
 | Outdoor, boiler, return-water and flue-gas temperatures | Both | `sensors.outdoor_temp`, `boiler_temp`, `return_temp`, `smoke_temp` |
 | Mean outdoor temperature | Base | `sensors.mean_outside_temp` |
+| Primary boiler temperature | Base | `settings.primary_boiler_temp` |
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
 | Circuit A supply temperature | iSystem | `circuit_a.supply_temp` |
 | Auxiliary 1, auxiliary 2 and universal input temperatures | iSystem | `sensors.auxiliary_1_temp`, `sensors.auxiliary_2_temp`, `sensors.universal_temp` |

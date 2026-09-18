@@ -114,6 +114,7 @@ class Settings(DiematicComponent):
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
     boiler_min = float10(70, writable=True, force_fc16=True, unit="°C")
     boiler_max = float10(71, writable=True, force_fc16=True, unit="°C")
+    primary_boiler_temp = float10(121, unit="°C")
 
 
 class Outputs(DiematicComponent):
