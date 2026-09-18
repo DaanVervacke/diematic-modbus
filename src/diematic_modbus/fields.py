@@ -117,6 +117,14 @@ def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[floa
     )
 
 
+def positive_float10(value: Any) -> float:
+    """Validate a nonnegative tenths value for a controller write."""
+    result = float(value)
+    if not 0.0 <= result <= 10.0:
+        raise ValueError("value must be between 0 and 10 °C")
+    return result
+
+
 class _CodeLabel:
     """Map a code to its label, an ok code to None, an unknown code to the raw int."""
 

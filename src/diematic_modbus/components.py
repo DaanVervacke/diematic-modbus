@@ -11,6 +11,7 @@ from .fields import (
     fault_code,
     float10,
     masked_enum,
+    positive_float10,
     scaled_integer,
     snap_clamp,
 )
@@ -106,7 +107,9 @@ class CircuitB(DiematicComponent):
 class Settings(DiematicComponent):
     """Boiler-level configuration, some writable and some read-only."""
 
-    ext_frost_threshold = float10(9, unit="°C")
+    ext_frost_threshold = float10(
+        9, writable=positive_float10, force_fc16=True, unit="°C"
+    )
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
     boiler_min = float10(70, writable=True, force_fc16=True, unit="°C")
     boiler_max = float10(71, writable=True, force_fc16=True, unit="°C")

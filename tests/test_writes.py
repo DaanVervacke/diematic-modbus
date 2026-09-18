@@ -37,6 +37,19 @@ async def test_settings_boiler_max_writes(mock_modbus_unit):
     assert mock_modbus_unit.holding[71] == 750
 
 
+async def test_settings_ext_frost_threshold_writes_positive_value(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.settings.write("ext_frost_threshold", 5)
+    assert mock_modbus_unit.holding[9] == 50
+
+
+async def test_settings_ext_frost_threshold_rejects_negative_value(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    with pytest.raises(ValueError, match="between 0 and 10"):
+        await diematic.settings.write("ext_frost_threshold", -5)
+    assert 9 not in mock_modbus_unit.holding
+
+
 async def test_circuit_slope_writes(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
     await diematic.circuit_a.write("slope", 1.5)
