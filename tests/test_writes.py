@@ -19,6 +19,12 @@ async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
     assert mock_modbus_unit.holding[59] == 530
 
 
+async def test_hot_water_pump_delay_writes_register_61(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.hot_water.write("pump_delay", 3)
+    assert mock_modbus_unit.holding[61] == 3
+
+
 async def test_settings_boiler_max_writes(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
     await diematic.settings.write("boiler_max", 75)

@@ -65,6 +65,7 @@ class HotWater(DiematicComponent):
 
     temp = float10(62, unit="°C")
     priority = masked_enum(60, 0xFF, HotWaterPriority)
+    pump_delay = integer(61, signed=False, writable=True, force_fc16=True, unit="min")
     temp_dpsm = float10(459, unit="°C")
     mode = masked_enum(17, 0x50, HotWaterMode)
     day_target = float10(59, writable=_HOT_WATER, force_fc16=True, unit="°C")
