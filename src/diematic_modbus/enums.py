@@ -76,6 +76,14 @@ class AuxiliaryType(IntEnum):
     FAILURE = 4
 
 
+class LegionellaProtection(IntEnum):
+    """Domestic hot-water legionella protection schedule."""
+
+    NONE = 0
+    DAILY = 1
+    WEEKLY = 2
+
+
 class ActiveMode(IntEnum):
     """The mode a zone is currently running, from the iSystem active-mode registers."""
 

@@ -18,6 +18,7 @@ from .enums import (
     HotWaterMode,
     HotWaterPriority,
     Language,
+    LegionellaProtection,
 )
 from .faults import MODULENS_FAULTS
 from .fields import (
@@ -137,6 +138,7 @@ class HotWater(ISystemComponent):
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
     priority = masked_enum(674, 0xFF, HotWaterPriority)
+    legionella_protection = enum_value(268, LegionellaProtection)
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
     night_target = float10(673, writable=_DHW, force_fc16=True, unit="°C")
 

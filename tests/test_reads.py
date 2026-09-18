@@ -61,6 +61,8 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.hot_water.temp_dpsm == 50.5
     assert diematic.hot_water.mode is HotWaterMode.TEMP
     assert diematic.hot_water.priority is HotWaterPriority.TOTAL
+    assert diematic.service.burner_starts == 0.0
+    assert diematic.service.burner_runtime == 0.0
     assert diematic.hot_water.day_target == 55.0
 
     assert diematic.sensors.calc_boiler_temp == 70.0

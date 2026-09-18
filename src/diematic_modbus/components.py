@@ -6,9 +6,23 @@ from modbus_connection.model import Component, bit, integer
 
 from .enums import HeatingMode, HotWaterMode, HotWaterPriority
 from .faults import MODULENS_FAULTS
-from .fields import boiler_type_field, fault_code, float10, masked_enum, snap_clamp
+from .fields import (
+    boiler_type_field,
+    fault_code,
+    float10,
+    masked_enum,
+    scaled_integer,
+    snap_clamp,
+)
 
-HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472), (474, 475))
+HOLDING_WINDOWS = (
+    (1, 63),
+    (64, 127),
+    (251, 254),
+    (384, 447),
+    (448, 472),
+    (474, 475),
+)
 
 _HOT_WATER = snap_clamp(1.0, 10.0, 80.0)
 _ZONE = snap_clamp(0.5, 5.0, 30.0)
@@ -116,6 +130,19 @@ class Outputs(DiematicComponent):
     auxiliary_2_pump_on = bit(475, 11)
     auxiliary_3_pump_on = bit(475, 12)
     phone_output_on = bit(475, 13)
+
+
+class Service(DiematicComponent):
+    """Read-only burner counters and runtime values."""
+
+    burner_starts = scaled_integer(77, 10, unit="starts")
+    burner_runtime = scaled_integer(78, 10, unit="h")
+    second_stage_burner_starts = scaled_integer(79, 10, unit="starts")
+    second_stage_burner_runtime = scaled_integer(80, 10, unit="h")
+    burner_starts_units = integer(251, signed=False, unit="starts")
+    burner_runtime_units = integer(252, signed=False, unit="h")
+    second_stage_burner_starts_units = integer(253, signed=False, unit="starts")
+    second_stage_burner_runtime_units = integer(254, signed=False, unit="h")
 
 
 class Identity(DiematicComponent):

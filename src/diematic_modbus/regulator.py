@@ -12,6 +12,7 @@ from .components import (
     Identity,
     Outputs,
     Sensors,
+    Service,
     Settings,
 )
 from .enums import DiematicVariant
@@ -42,6 +43,7 @@ class Diematic(_Regulator):
         self.circuit_b = CircuitB(unit)
         self.settings = Settings(unit)
         self.outputs = Outputs(unit)
+        self.service = Service(unit)
         self.identity = Identity(unit)
         self._install_engine(
             unit,
@@ -52,6 +54,7 @@ class Diematic(_Regulator):
                 "circuit_b": self.circuit_b,
                 "settings": self.settings,
                 "outputs": self.outputs,
+                "service": self.service,
                 "identity": self.identity,
             },
             _READ_ONCE,

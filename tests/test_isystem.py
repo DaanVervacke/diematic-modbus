@@ -73,6 +73,7 @@ async def test_isystem_reads_decode_across_bundles(mock_modbus_unit):
     assert boiler.hot_water.temp == 50.0
     assert boiler.hot_water.mode is HotWaterMode.TEMP
     assert boiler.hot_water.day_target == 55.0
+    assert boiler.hot_water.legionella_protection == 0
     assert boiler.outputs.primary == 0
     assert boiler.outputs.secondary == 0
     assert boiler.outputs.dhw_pump_on is False

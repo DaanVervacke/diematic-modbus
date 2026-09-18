@@ -11,6 +11,7 @@ from .enums import (
     HotWaterMode,
     HotWaterPriority,
     Language,
+    LegionellaProtection,
 )
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
@@ -43,6 +44,7 @@ __all__ = [
     "HotWaterPriority",
     "Identity",
     "Language",
+    "LegionellaProtection",
     "ProbeBlock",
     "Schedules",
     "Sensors",

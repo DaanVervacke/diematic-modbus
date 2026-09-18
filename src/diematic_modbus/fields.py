@@ -98,6 +98,13 @@ def enum_value[E: IntEnum](address: int, enum_type: type[E]) -> NumberField[E | 
     return NumberField(address, signed=False, convert=_EnumValue(enum_type))
 
 
+def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[float]:
+    """Read an unsigned integer scaled by a fixed divisor."""
+    return NumberField(
+        address, signed=False, convert=lambda raw: raw / divisor, unit=unit
+    )
+
+
 class _CodeLabel:
     """Map a code to its label, an ok code to None, an unknown code to the raw int."""
 
