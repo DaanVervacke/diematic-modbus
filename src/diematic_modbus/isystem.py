@@ -11,19 +11,25 @@ from modbus_connection.model import Component, NumberField, bit, integer
 from ._base import _HEATING_MASK, _HOT_WATER_MASK, ClockPolicy, _Regulator
 from .enums import (
     ActiveMode,
+    AuxiliaryType,
+    CircuitType,
     DiematicVariant,
     HeatingMode,
     HotWaterMode,
     HotWaterPriority,
+    Language,
+    LegionellaProtection,
 )
 from .faults import MODULENS_FAULTS
 from .fields import (
     DaySchedule,
     WeekSchedule,
     boiler_type_field,
+    enum_value,
     fault_code,
     float10,
     masked_enum,
+    multiplied_integer,
     schedule_day,
     snap_clamp,
     time_program,
@@ -40,10 +46,12 @@ ISYSTEM_WINDOWS = (
     (263, 299),
     (305, 360),
     (426, 474),
+    (475, 475),
     (600, 625),
     (637, 644),
     (650, 685),
     (707, 744),
+    (745, 746),
 )
 
 _SCHEDULE_BASES = {
@@ -88,6 +96,16 @@ def _permanent_derogation(raw: int) -> bool | None:
     return None
 
 
+def _derogation_until_end(raw: int) -> bool | None:
+    """Decode the documented timed-override bit for known heating modes."""
+    mode = raw & _HEATING_MASK
+    if mode in (HeatingMode.PERM_DAY, HeatingMode.PERM_NIGHT):
+        return False
+    if mode in (HeatingMode.AUTO, HeatingMode.TEMP_DAY, HeatingMode.TEMP_NIGHT):
+        return bool(raw & 0x20)
+    return None
+
+
 class ISystemComponent(Component):
     """An iSystem register bundle limited to the supported read windows."""
 
@@ -120,6 +138,10 @@ class HotWater(ISystemComponent):
     temp = float10(603, unit="°C")
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
+    priority = masked_enum(674, 0xFF, HotWaterPriority)
+    legionella_protection = enum_value(
+        268, LegionellaProtection, writable=True, force_fc16=True
+    )
     day_target = float10(672, writable=_DHW, force_fc16=True, unit="°C")
     night_target = float10(673, writable=_DHW, force_fc16=True, unit="°C")
 
@@ -131,9 +153,13 @@ class CircuitA(ISystemComponent):
     calc_temp = float10(615, unit="°C")
     supply_temp = float10(621, unit="°C")
     mode = masked_enum(_MODE_A_ISYSTEM, _HEATING_MASK, HeatingMode)
+    circuit_type = enum_value(296, CircuitType)
     active_mode = masked_enum(637, 0x06, ActiveMode)
     permanent_derogation = NumberField[bool | None](
         _MODE_A_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
+    derogation_until_end = NumberField[bool | None](
+        _MODE_A_ISYSTEM, signed=False, convert=_derogation_until_end
     )
     program = time_program(231)
     pump_on = bit(427, 4)
@@ -151,9 +177,13 @@ class CircuitB(ISystemComponent):
     calc_temp = float10(617, unit="°C")
     supply_temp = float10(605, unit="°C")
     mode = masked_enum(_MODE_B_ISYSTEM, _HEATING_MASK, HeatingMode)
+    circuit_type = enum_value(297, CircuitType)
     active_mode = masked_enum(638, 0x06, ActiveMode)
     permanent_derogation = NumberField[bool | None](
         _MODE_B_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
+    derogation_until_end = NumberField[bool | None](
+        _MODE_B_ISYSTEM, signed=False, convert=_derogation_until_end
     )
     all_circuits_derogation = bit(_MODE_B_ISYSTEM, 7)
     program = time_program(232)
@@ -175,10 +205,14 @@ class CircuitC(ISystemComponent):
     room_temp = float10(618, unit="°C")
     calc_temp = float10(619, unit="°C")
     mode = masked_enum(_MODE_C_ISYSTEM, _HEATING_MASK, HeatingMode)
+    circuit_type = enum_value(360, CircuitType)
     active_mode = masked_enum(639, 0x06, ActiveMode)
     program = time_program(233)
     permanent_derogation = NumberField[bool | None](
         _MODE_C_ISYSTEM, signed=False, convert=_permanent_derogation
+    )
+    derogation_until_end = NumberField[bool | None](
+        _MODE_C_ISYSTEM, signed=False, convert=_derogation_until_end
     )
     all_circuits_derogation = bit(_MODE_C_ISYSTEM, 7)
     ambient_influence = integer(668, signed=False)
@@ -272,6 +306,7 @@ SCHEDULE_BASES = Schedules.SCHEDULE_BASES
 class Settings(ISystemComponent):
     """Boiler-level configuration in the iSystem layout."""
 
+    language = enum_value(263, Language)
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
     boiler_min = float10(677, unit="°C")
     boiler_max = float10(678, unit="°C")
@@ -283,13 +318,12 @@ class Config(ISystemComponent):
     autoadapt_a = float10(247)
     autoadapt_b = float10(248)
     autoadapt_c = float10(249)
-    language = integer(263, signed=False)
     building_inertia = integer(264, signed=False)
     bandwidth = float10(266)
     three_way_valve_shift = float10(267)
     min_running_time = integer(269, signed=False)
     burner_temporisation = integer(271, signed=False)
-    pump_postrun = integer(272, signed=False)
+    pump_postrun = multiplied_integer(272, 2, unit="min")
     outside_calibration = float10(274, unit="°C")
     zone_a_calibration = float10(275, unit="°C")
     zone_b_calibration = float10(276, unit="°C")
@@ -303,9 +337,6 @@ class Config(ISystemComponent):
     footprint_b_night = float10(292, none_values=(150,))
     footprint_c_day = float10(358, none_values=(150,))
     footprint_c_night = float10(359, none_values=(150,))
-    zone_a_type = integer(296, signed=False)
-    zone_b_type = integer(297, signed=False)
-    zone_c_type = integer(360, signed=False)
     zone_a_min = float10(298, unit="°C")
     zone_a_max = float10(299, unit="°C")
     max_fan_speed = integer(305, signed=False, nan=0xFFFF, unit="rpm")
@@ -313,7 +344,28 @@ class Config(ISystemComponent):
     calc_setpoint = float10(436, unit="°C")
     three_way_valve_bandwidth = float10(438)
     modulated_power = integer(473, signed=False, unit="%")
-    output_state = integer(474, signed=False)
+
+
+class Outputs(ISystemComponent):
+    """Read-only output words and documented secondary output bits."""
+
+    primary = integer(474, signed=False)
+    secondary = integer(475, signed=False)
+    boiler_state = integer(735, signed=False)
+    dhw_pump_on = bit(475, 0)
+    circuit_a_pump_on = bit(475, 1)
+    circuit_a_valve_open = bit(475, 2)
+    circuit_a_valve_close = bit(475, 3)
+    circuit_b_pump_on = bit(475, 4)
+    circuit_b_valve_open = bit(475, 5)
+    circuit_b_valve_close = bit(475, 6)
+    circuit_c_pump_on = bit(475, 7)
+    circuit_c_valve_open = bit(475, 8)
+    circuit_c_valve_close = bit(475, 9)
+    auxiliary_1_pump_on = bit(475, 10)
+    auxiliary_2_pump_on = bit(475, 11)
+    auxiliary_3_pump_on = bit(475, 12)
+    phone_output_on = bit(475, 13)
 
 
 class Diagnostics(ISystemComponent):
@@ -326,9 +378,10 @@ class Diagnostics(ISystemComponent):
     pcu_substate = integer(711, signed=False)
     pcu_block = integer(712, signed=False)
     pcu_lock = integer(713, signed=False)
-    boiler_state = integer(735, signed=False)
     system_input_state = integer(741, signed=False)
-    zone_aux_type = integer(744, signed=False)
+    auxiliary_1_type = enum_value(744, AuxiliaryType)
+    auxiliary_2_type = enum_value(745, AuxiliaryType)
+    auxiliary_3_type = enum_value(746, AuxiliaryType)
 
 
 class Identity(ISystemComponent):
@@ -376,6 +429,7 @@ class DiematicISystem(_Regulator):
         self.schedules = Schedules(unit)
         self.settings = Settings(unit)
         self.config = Config(unit)
+        self.outputs = Outputs(unit)
         self.diagnostics = Diagnostics(unit)
         self.identity = Identity(unit)
         self._install_engine(
@@ -388,6 +442,7 @@ class DiematicISystem(_Regulator):
                 "circuit_c": self.circuit_c,
                 "settings": self.settings,
                 "config": self.config,
+                "outputs": self.outputs,
                 "diagnostics": self.diagnostics,
                 "identity": self.identity,
                 **{

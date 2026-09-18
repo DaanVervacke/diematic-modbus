@@ -80,6 +80,58 @@ def masked_enum[E: IntEnum](
     return NumberField(address, signed=False, convert=_MaskedEnum(mask, enum_type))
 
 
+class _EnumValue[E: IntEnum]:
+    """Decode an enum while preserving unknown register values."""
+
+    def __init__(self, enum_type: type[E]) -> None:
+        self.enum_type = enum_type
+
+    def __call__(self, raw: int) -> E | int:
+        try:
+            return self.enum_type(raw)
+        except ValueError:
+            return raw
+
+
+def enum_value[E: IntEnum](
+    address: int,
+    enum_type: type[E],
+    *,
+    writable: bool = False,
+    force_fc16: bool = False,
+) -> NumberField[E | int]:
+    """Read an unsigned enum value while preserving unknown values."""
+    return NumberField(
+        address,
+        signed=False,
+        convert=_EnumValue(enum_type),
+        writable=writable,
+        force_fc16=force_fc16,
+    )
+
+
+def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[float]:
+    """Read an unsigned integer scaled by a fixed divisor."""
+    return NumberField(
+        address, signed=False, convert=lambda raw: raw / divisor, unit=unit
+    )
+
+
+def multiplied_integer(address: int, multiplier: int, *, unit: str) -> NumberField[int]:
+    """Read an unsigned integer multiplied by a fixed factor."""
+    return NumberField(
+        address, signed=False, convert=lambda raw: raw * multiplier, unit=unit
+    )
+
+
+def positive_float10(value: Any) -> float:
+    """Validate a nonnegative tenths value for a controller write."""
+    result = float(value)
+    if not 0.0 <= result <= 10.0:
+        raise ValueError("value must be between 0 and 10 °C")
+    return result
+
+
 class _CodeLabel:
     """Map a code to its label, an ok code to None, an unknown code to the raw int."""
 

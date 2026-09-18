@@ -11,6 +11,7 @@ def _seed(unit: MockModbusUnit) -> None:
             4: 14,
             5: 30,
             7: 205,
+            102: 175,
             14: 550,
             17: 0x58,
             18: 210,
@@ -34,6 +35,7 @@ def _seed(unit: MockModbusUnit) -> None:
             463: 42,
             465: 0xFFFF,
             116: 0x0005,
+            121: 800,
             467: 0x8000 | 120,
             470: 195,
             471: 250,
@@ -47,7 +49,9 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     await diematic.async_update()
 
     assert diematic.sensors.outdoor_temp == 20.5
+    assert diematic.sensors.mean_outside_temp == 17.5
     assert diematic.sensors.boiler_temp == 65.0
+    assert diematic.settings.primary_boiler_temp == 80.0
     assert diematic.sensors.return_temp is None
     assert diematic.sensors.water_pressure == 1.5
     assert diematic.sensors.fan_speed == 3000
@@ -61,6 +65,8 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.hot_water.temp_dpsm == 50.5
     assert diematic.hot_water.mode is HotWaterMode.TEMP
     assert diematic.hot_water.priority is HotWaterPriority.TOTAL
+    assert diematic.service.burner_starts == 0.0
+    assert diematic.service.burner_runtime == 0.0
     assert diematic.hot_water.day_target == 55.0
 
     assert diematic.sensors.calc_boiler_temp == 70.0
@@ -79,8 +85,8 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     ("raw", "expected"),
     [
         (0, HotWaterPriority.TOTAL),
-        (1, HotWaterPriority.RELATIVE),
-        (2, HotWaterPriority.NON_PRIORITY),
+        (1, HotWaterPriority.SLIDING),
+        (2, HotWaterPriority.NONE),
         (3, 3),
     ],
 )

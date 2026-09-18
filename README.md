@@ -151,6 +151,16 @@ them to your installation using `--baudrate`, `--bytesize`, `--parity`, and
 uv run --extra cli scripts/read_diematic.py --help
 ```
 
+For read-only investigation of candidate registers, repeat `--raw-range` with
+the start address and word count. The command prints hexadecimal holding words
+without decoding them or writing to the controller:
+
+```shell
+uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 \
+  --unit 10 --layout isystem \
+  --raw-range 507 4 --raw-range 309 39
+```
+
 `--variant 3` or `--variant 4` affects only the library's base-layout heating
 and hot-water mode changes. It does not select the layout and has no effect
 on this read-only test. The script defaults to variant 3 and layout `base`.
@@ -445,6 +455,8 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Reading | Layout | Python field(s) |
 | --- | --- | --- |
 | Outdoor, boiler, return-water and flue-gas temperatures | Both | `sensors.outdoor_temp`, `boiler_temp`, `return_temp`, `smoke_temp` |
+| Mean outdoor temperature | Base | `sensors.mean_outside_temp` |
+| Primary boiler temperature | Base | `settings.primary_boiler_temp` |
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
 | Circuit A supply temperature | iSystem | `circuit_a.supply_temp` |
 | Auxiliary 1, auxiliary 2 and universal input temperatures | iSystem | `sensors.auxiliary_1_temp`, `sensors.auxiliary_2_temp`, `sensors.universal_temp` |
@@ -500,7 +512,7 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Current hot-water operating state | iSystem | `hot_water.active_mode` |
 
 Base `hot_water.priority` uses the documented low-plane register 60 values 0 for
-total, 1 for relative, and 2 for non-priority. It is read-only and has not been
+total, 1 for sliding, and 2 for none. It is read-only and has not been
 panel-verified across every base-layout generation.
 
 The heating curve describes how the controller adjusts heating temperature
@@ -538,7 +550,7 @@ restrictions. Writable values can also be read.
 | Hot-water day/night target | 10 to 80 °C, 1 °C steps | Same | `hot_water.write("day_target", value)` or `"night_target"` |
 | Hot-water mode | Yes | Yes | `set_hot_water_mode()` |
 | Summer/winter changeover temperature | 15 to 30.5 °C, 0.5 °C steps | Same | `settings.write("summer_winter_temp", value)` |
-| Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `boiler_max` |
+| Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `settings.boiler_max` |
 | Date and time | `set_clock(datetime)`, untested on a base-layout boiler | `set_clock(datetime)`, verified on the iSystem test boiler | `set_clock()` |
 
 `circuit_*` in this table means the appropriate circuit name, not literal
@@ -586,21 +598,21 @@ this library. Selecting which program is active is not implemented.
 These additional iSystem readings help compare installations and investigate
 the remaining register meanings. They are not installer controls.
 
-All fields in the following table belong to **`config` and are cached**,
-including the power and output values. Names follow the source register maps.
+Most fields in the following table belong to **`config` and are cached**.
+Names follow the source register maps.
 Where units or meanings have not been established, the library leaves them
 as numbers rather than inventing an explanation.
 
 | Information | Fields within `config` |
 | --- | --- |
 | Automatic adjustment values for A/B/C | `autoadapt_a`, `autoadapt_b`, `autoadapt_c` |
-| Language code and building-inertia setting | `language`, `building_inertia` |
+| Language code and building-inertia setting | `settings.language`, `config.building_inertia` |
 | Control bandwidth and mixing-valve adjustment | `bandwidth`, `three_way_valve_shift` |
-| Minimum running time, burner delay and pump run-on settings, without defined time units | `min_running_time`, `burner_temporisation`, `pump_postrun` |
+| Minimum running time, burner delay and pump run-on settings | `min_running_time`, `burner_temporisation`, `pump_postrun` |
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
 | A/B/C anticipation settings, without defined units | `anticipation_a`, `anticipation_b`, `anticipation_c` |
 | Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
-| A/B/C circuit type codes | `zone_a_type`, `zone_b_type`, `zone_c_type` |
+| A/B/C circuit type codes | `circuit_a.circuit_type`, `circuit_b.circuit_type`, `circuit_c.circuit_type` |
 | Circuit A minimum/maximum temperatures (°C) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
 | Mixing-valve temperature adjustment (°C) and bandwidth | `three_way_valve_temp_shift`, `three_way_valve_bandwidth` |
 | Calculated target (°C), reported modulated power (%) and output-state code | `calc_setpoint`, `modulated_power`, `output_state` |
@@ -612,10 +624,10 @@ explanations or Boolean fault flags.
 | Information | Fields within `diagnostics` |
 | --- | --- |
 | Boiler operating-mode code | `boiler_active_mode` |
-| Hot-water loading priority, decoded as `HotWaterPriority` (total, relative or non-priority) | `dhw_priority` |
+| Hot-water loading priority, decoded as `HotWaterPriority` (total, sliding or none) | `dhw_priority` |
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
-| Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `zone_aux_type` |
+| Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
 
 ### Known limits
 
@@ -719,6 +731,7 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Further cross-checks of the iSystem map:
   [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
+- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04.
 - Override-state field names and schedule meaning: De Dietrich's own parameter
   tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
   and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).

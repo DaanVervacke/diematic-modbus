@@ -19,10 +19,35 @@ async def test_hot_water_setpoint_snaps_and_writes(mock_modbus_unit):
     assert mock_modbus_unit.holding[59] == 530
 
 
+async def test_hot_water_pump_delay_writes_register_61(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.hot_water.write("pump_delay", 3)
+    assert mock_modbus_unit.holding[61] == 3
+
+
+async def test_isystem_legionella_protection_writes_register_268(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.hot_water.write("legionella_protection", 1)
+    assert mock_modbus_unit.holding[268] == 1
+
+
 async def test_settings_boiler_max_writes(mock_modbus_unit):
     diematic = Diematic(mock_modbus_unit)
     await diematic.settings.write("boiler_max", 75)
     assert mock_modbus_unit.holding[71] == 750
+
+
+async def test_settings_ext_frost_threshold_writes_positive_value(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    await diematic.settings.write("ext_frost_threshold", 5)
+    assert mock_modbus_unit.holding[9] == 50
+
+
+async def test_settings_ext_frost_threshold_rejects_negative_value(mock_modbus_unit):
+    diematic = Diematic(mock_modbus_unit)
+    with pytest.raises(ValueError, match="between 0 and 10"):
+        await diematic.settings.write("ext_frost_threshold", -5)
+    assert 9 not in mock_modbus_unit.holding
 
 
 async def test_circuit_slope_writes(mock_modbus_unit):
