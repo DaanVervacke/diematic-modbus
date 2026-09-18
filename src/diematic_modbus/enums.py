@@ -36,8 +36,44 @@ class HotWaterPriority(IntEnum):
     """Hot-water loading priority, decoded from the source parameter table."""
 
     TOTAL = 0
-    RELATIVE = 1
-    NON_PRIORITY = 2
+    SLIDING = 1
+    NONE = 2
+
+
+class CircuitType(IntEnum):
+    """Configured heating circuit type."""
+
+    DISABLED = 0
+    DIRECT = 1
+    THREE_WAY_VALVE = 2
+    DIRECT_PLUS = 3
+    THREE_WAY_VALVE_PLUS = 4
+    SWIMMING_POOL = 5
+
+
+class Language(IntEnum):
+    """Controller language selection."""
+
+    FRENCH = 0
+    GERMAN = 1
+    ENGLISH = 2
+    POLISH = 3
+    ITALIAN = 4
+    SPANISH = 5
+    DUTCH = 6
+    RUSSIAN = 7
+    TURKISH = 8
+    CZECH = 9
+
+
+class AuxiliaryType(IntEnum):
+    """Configured auxiliary output type."""
+
+    PROGRAM = 0
+    PRIMARY_PUMP = 1
+    THREE_WAY_VALVE_PUMP = 2
+    DHW_LOAD = 3
+    FAILURE = 4
 
 
 class ActiveMode(IntEnum):

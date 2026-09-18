@@ -5,11 +5,14 @@ from modbus_connection.mock import MockModbusUnit
 
 from diematic_modbus import (
     ActiveMode,
+    AuxiliaryType,
+    CircuitType,
     DiematicISystem,
     DiematicVariant,
     HeatingMode,
     HotWaterMode,
     HotWaterPriority,
+    Language,
 )
 from diematic_modbus.isystem import ISYSTEM_WINDOWS, SCHEDULE_BASES
 
@@ -70,6 +73,9 @@ async def test_isystem_reads_decode_across_bundles(mock_modbus_unit):
     assert boiler.hot_water.temp == 50.0
     assert boiler.hot_water.mode is HotWaterMode.TEMP
     assert boiler.hot_water.day_target == 55.0
+    assert boiler.outputs.primary == 0
+    assert boiler.outputs.secondary == 0
+    assert boiler.outputs.dhw_pump_on is False
 
     assert boiler.circuit_a.mode is HeatingMode.AUTO
     assert boiler.circuit_a.room_temp == 21.0
@@ -195,28 +201,36 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
             289: 350,
             291: 150,
             296: 1,
+            297: 2,
+            360: 5,
             298: 300,
             305: 5200,
             473: 1,
             644: 5,
             712: 255,
             744: 3,
+            745: 1,
+            746: 4,
         }
     )
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.async_update()
-    assert boiler.config.language == 5
+    assert boiler.settings.language is Language.SPANISH
     assert boiler.config.bandwidth == 12.0
     assert boiler.config.zone_b_calibration == -1.6
     assert boiler.config.footprint_a_day == 35.0
     assert boiler.config.footprint_b_day is None
-    assert boiler.config.zone_a_type == 1
+    assert boiler.circuit_a.circuit_type is CircuitType.DIRECT
+    assert boiler.circuit_b.circuit_type is CircuitType.THREE_WAY_VALVE
+    assert boiler.circuit_c.circuit_type is CircuitType.SWIMMING_POOL
     assert boiler.config.zone_a_min == 30.0
     assert boiler.config.max_fan_speed == 5200
     assert boiler.config.modulated_power == 1
     assert boiler.diagnostics.boiler_active_mode == 5
     assert boiler.diagnostics.pcu_block == 255
-    assert boiler.diagnostics.zone_aux_type == 3
+    assert boiler.diagnostics.auxiliary_1_type is AuxiliaryType.DHW_LOAD
+    assert boiler.diagnostics.auxiliary_2_type is AuxiliaryType.PRIMARY_PUMP
+    assert boiler.diagnostics.auxiliary_3_type is AuxiliaryType.FAILURE
 
 
 async def test_isystem_config_sentinels_decode_as_missing_values(mock_modbus_unit):
@@ -252,15 +266,40 @@ async def test_isystem_unknown_fault_and_diagnostics_values_stay_raw(mock_modbus
     assert boiler.diagnostics.pcu_block == 0x1234
 
 
+async def test_isystem_outputs_decode_documented_secondary_bits(mock_modbus_unit):
+    mock_modbus_unit.holding.update({474: 0x8000, 475: 0x2001, 735: 0x4000})
+    boiler = DiematicISystem(mock_modbus_unit)
+
+    await boiler.async_update()
+
+    assert boiler.outputs.primary == 0x8000
+    assert boiler.outputs.secondary == 0x2001
+    assert boiler.outputs.dhw_pump_on is True
+    assert boiler.outputs.circuit_a_pump_on is False
+    assert boiler.outputs.phone_output_on is True
+    assert boiler.outputs.boiler_state == 0x4000
+
+
 async def test_isystem_dhw_priority_decodes(mock_modbus_unit):
     _seed(mock_modbus_unit)
     mock_modbus_unit.holding.update({674: 1})
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.async_update()
-    assert boiler.diagnostics.dhw_priority is HotWaterPriority.RELATIVE
+    assert boiler.diagnostics.dhw_priority is HotWaterPriority.SLIDING
     mock_modbus_unit.holding.update({674: 9})
     await boiler.async_update()
     assert boiler.diagnostics.dhw_priority == 9
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [(0x08, False), (0x24, True), (0x04, False), (0x01, None)],
+)
+async def test_isystem_derogation_until_end_decodes(mock_modbus_unit, raw, expected):
+    boiler = DiematicISystem(mock_modbus_unit)
+    mock_modbus_unit.holding[659] = raw
+    await boiler.circuit_b.async_update()
+    assert boiler.circuit_b.derogation_until_end is expected
 
 
 async def test_isystem_active_mode_decodes(mock_modbus_unit):

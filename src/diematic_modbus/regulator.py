@@ -5,7 +5,15 @@ from __future__ import annotations
 from modbus_connection import ModbusUnit
 
 from ._base import ClockPolicy, _Regulator
-from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
+from .components import (
+    CircuitA,
+    CircuitB,
+    HotWater,
+    Identity,
+    Outputs,
+    Sensors,
+    Settings,
+)
 from .enums import DiematicVariant
 
 _READ_ONCE: frozenset[str] = frozenset()
@@ -33,6 +41,7 @@ class Diematic(_Regulator):
         self.circuit_a = CircuitA(unit)
         self.circuit_b = CircuitB(unit)
         self.settings = Settings(unit)
+        self.outputs = Outputs(unit)
         self.identity = Identity(unit)
         self._install_engine(
             unit,
@@ -42,6 +51,7 @@ class Diematic(_Regulator):
                 "circuit_a": self.circuit_a,
                 "circuit_b": self.circuit_b,
                 "settings": self.settings,
+                "outputs": self.outputs,
                 "identity": self.identity,
             },
             _READ_ONCE,

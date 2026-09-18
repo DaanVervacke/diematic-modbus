@@ -21,6 +21,10 @@ def test_float10_decodes_sign_magnitude_negative():
     assert Float10Field(0).decode([0x8000 | 50]) == -5.0
 
 
+def test_float10_matches_official_negative_tenth_example():
+    assert Float10Field(0).decode([0x8001]) == -0.1
+
+
 @pytest.mark.parametrize("raw", [0xFFFF, 0x8CCC])
 def test_float10_absent_sensor_values_are_none(raw):
     assert Float10Field(0).decode([raw]) is None
@@ -39,6 +43,10 @@ def test_float10_encodes_positive():
 
 def test_float10_encodes_negative_with_sign_bit():
     assert Float10Field(0).encode(-5.0) == [0x8000 | 50]
+
+
+def test_float10_encodes_negative_tenth_example():
+    assert Float10Field(0).encode(-0.1) == [0x8001]
 
 
 def test_snap_clamp_snaps_and_clamps_hot_water():

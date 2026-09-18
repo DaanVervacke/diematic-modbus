@@ -80,6 +80,24 @@ def masked_enum[E: IntEnum](
     return NumberField(address, signed=False, convert=_MaskedEnum(mask, enum_type))
 
 
+class _EnumValue[E: IntEnum]:
+    """Decode an enum while preserving unknown register values."""
+
+    def __init__(self, enum_type: type[E]) -> None:
+        self.enum_type = enum_type
+
+    def __call__(self, raw: int) -> E | int:
+        try:
+            return self.enum_type(raw)
+        except ValueError:
+            return raw
+
+
+def enum_value[E: IntEnum](address: int, enum_type: type[E]) -> NumberField[E | int]:
+    """Read an unsigned enum value while preserving unknown values."""
+    return NumberField(address, signed=False, convert=_EnumValue(enum_type))
+
+
 class _CodeLabel:
     """Map a code to its label, an ok code to None, an unknown code to the raw int."""
 

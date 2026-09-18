@@ -600,7 +600,7 @@ as numbers rather than inventing an explanation.
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
 | A/B/C anticipation settings, without defined units | `anticipation_a`, `anticipation_b`, `anticipation_c` |
 | Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
-| A/B/C circuit type codes | `zone_a_type`, `zone_b_type`, `zone_c_type` |
+| A/B/C circuit type codes | `circuit_a.circuit_type`, `circuit_b.circuit_type`, `circuit_c.circuit_type` |
 | Circuit A minimum/maximum temperatures (°C) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
 | Mixing-valve temperature adjustment (°C) and bandwidth | `three_way_valve_temp_shift`, `three_way_valve_bandwidth` |
 | Calculated target (°C), reported modulated power (%) and output-state code | `calc_setpoint`, `modulated_power`, `output_state` |
@@ -615,7 +615,7 @@ explanations or Boolean fault flags.
 | Hot-water loading priority, decoded as `HotWaterPriority` (total, relative or non-priority) | `dhw_priority` |
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
-| Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `zone_aux_type` |
+| Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
 
 ### Known limits
 
@@ -719,6 +719,7 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Further cross-checks of the iSystem map:
   [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
+- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04.
 - Override-state field names and schedule meaning: De Dietrich's own parameter
   tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
   and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).

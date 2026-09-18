@@ -8,7 +8,7 @@ from .enums import HeatingMode, HotWaterMode, HotWaterPriority
 from .faults import MODULENS_FAULTS
 from .fields import boiler_type_field, fault_code, float10, masked_enum, snap_clamp
 
-HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472))
+HOLDING_WINDOWS = ((1, 63), (64, 127), (384, 447), (448, 472), (474, 475))
 
 _HOT_WATER = snap_clamp(1.0, 10.0, 80.0)
 _ZONE = snap_clamp(0.5, 5.0, 30.0)
@@ -95,6 +95,27 @@ class Settings(DiematicComponent):
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
     boiler_min = float10(70, writable=True, force_fc16=True, unit="°C")
     boiler_max = float10(71, writable=True, force_fc16=True, unit="°C")
+
+
+class Outputs(DiematicComponent):
+    """Read-only output words and documented secondary output bits."""
+
+    primary = integer(474, signed=False)
+    secondary = integer(475, signed=False)
+    dhw_pump_on = bit(475, 0)
+    circuit_a_pump_on = bit(475, 1)
+    circuit_a_valve_open = bit(475, 2)
+    circuit_a_valve_close = bit(475, 3)
+    circuit_b_pump_on = bit(475, 4)
+    circuit_b_valve_open = bit(475, 5)
+    circuit_b_valve_close = bit(475, 6)
+    circuit_c_pump_on = bit(475, 7)
+    circuit_c_valve_open = bit(475, 8)
+    circuit_c_valve_close = bit(475, 9)
+    auxiliary_1_pump_on = bit(475, 10)
+    auxiliary_2_pump_on = bit(475, 11)
+    auxiliary_3_pump_on = bit(475, 12)
+    phone_output_on = bit(475, 13)
 
 
 class Identity(DiematicComponent):

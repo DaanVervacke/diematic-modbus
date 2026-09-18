@@ -4,10 +4,13 @@ from ._base import UpdateReport
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
 from .enums import (
     ActiveMode,
+    AuxiliaryType,
+    CircuitType,
     DiematicVariant,
     HeatingMode,
     HotWaterMode,
     HotWaterPriority,
+    Language,
 )
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
@@ -25,8 +28,10 @@ __all__ = [
     "MODEL_CODES",
     "MODULENS_FAULTS",
     "ActiveMode",
+    "AuxiliaryType",
     "CircuitA",
     "CircuitB",
+    "CircuitType",
     "Diematic",
     "DiematicDetection",
     "DiematicISystem",
@@ -37,6 +42,7 @@ __all__ = [
     "HotWaterMode",
     "HotWaterPriority",
     "Identity",
+    "Language",
     "ProbeBlock",
     "Schedules",
     "Sensors",

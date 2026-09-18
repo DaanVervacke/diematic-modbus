@@ -79,8 +79,8 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     ("raw", "expected"),
     [
         (0, HotWaterPriority.TOTAL),
-        (1, HotWaterPriority.RELATIVE),
-        (2, HotWaterPriority.NON_PRIORITY),
+        (1, HotWaterPriority.SLIDING),
+        (2, HotWaterPriority.NONE),
         (3, 3),
     ],
 )
