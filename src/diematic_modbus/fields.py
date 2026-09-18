@@ -93,9 +93,21 @@ class _EnumValue[E: IntEnum]:
             return raw
 
 
-def enum_value[E: IntEnum](address: int, enum_type: type[E]) -> NumberField[E | int]:
+def enum_value[E: IntEnum](
+    address: int,
+    enum_type: type[E],
+    *,
+    writable: bool = False,
+    force_fc16: bool = False,
+) -> NumberField[E | int]:
     """Read an unsigned enum value while preserving unknown values."""
-    return NumberField(address, signed=False, convert=_EnumValue(enum_type))
+    return NumberField(
+        address,
+        signed=False,
+        convert=_EnumValue(enum_type),
+        writable=writable,
+        force_fc16=force_fc16,
+    )
 
 
 def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[float]:
