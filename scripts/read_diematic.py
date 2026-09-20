@@ -232,6 +232,29 @@ async def _probe_write(regulator: Regulator) -> bool:
     return readback == current
 
 
+def _normalize_target(args: argparse.Namespace) -> None:
+    """Unpack tcp:// URLs and rewrite bare HOST[:PORT] to socket:// serial."""
+    target = args.target
+    if target.startswith("tcp://"):
+        host, separator, port = target.removeprefix("tcp://").rpartition(":")
+        if separator and port.isdigit():
+            args.target = host
+            args.port = int(port)
+        else:
+            args.target = target.removeprefix("tcp://")
+        args.transport = "tcp"
+        return
+    if "://" in target:
+        return
+    if target.startswith("/"):
+        args.transport = "serial"
+        return
+    if ":" not in target and getattr(args, "port", None):
+        target = f"{target}:{args.port}"
+    args.target = f"socket://{target}"
+    args.transport = "serial"
+
+
 async def _main() -> int:
     parser = argparse.ArgumentParser(
         description="Read your Diematic boiler once for comparison with its panel.",
@@ -295,12 +318,7 @@ async def _main() -> int:
         ),
     )
     args = parser.parse_args()
-    if "://" not in args.target:
-        target = args.target
-        if ":" not in target and getattr(args, "port", None):
-            target = f"{target}:{args.port}"
-        args.target = f"socket://{target}"
-        args.transport = "serial"
+    _normalize_target(args)
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)

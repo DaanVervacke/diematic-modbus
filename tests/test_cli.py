@@ -211,6 +211,44 @@ async def test_explicit_socket_target_is_not_double_prefixed(
     script.connect_from_args.return_value.close.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    ("target", "extra_args", "expected_port"),
+    [
+        ("tcp://192.168.1.50:502", [], 502),
+        ("tcp://192.168.1.50:502", ["--port", "1502"], 502),
+        ("tcp://192.168.1.50", ["--port", "1502"], 1502),
+    ],
+)
+async def test_explicit_tcp_target_unpacks_scheme_and_port(
+    script, mock_modbus_unit, monkeypatch, target, extra_args, expected_port
+):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["read_diematic.py", target, *extra_args, "--layout", "isystem"],
+    )
+    assert await script._main() == 0
+    args = script.connect_from_args.call_args.args[0]
+    assert args.target == "192.168.1.50"
+    assert args.port == expected_port
+    assert args.transport == "tcp"
+    script.connect_from_args.return_value.close.assert_awaited_once()
+
+
+@pytest.mark.parametrize("transport_arg", [[], ["--transport", "serial"]])
+async def test_serial_device_path_is_not_rewritten_to_socket(
+    script, mock_modbus_unit, monkeypatch, transport_arg
+):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["read_diematic.py", "/dev/ttyUSB0", *transport_arg, "--layout", "isystem"],
+    )
+    assert await script._main() == 0
+    args = script.connect_from_args.call_args.args[0]
+    assert args.target == "/dev/ttyUSB0"
+    assert args.transport == "serial"
+    script.connect_from_args.return_value.close.assert_awaited_once()
+
+
 async def test_raw_range_reads_exact_words_without_writes(
     script, mock_modbus_unit, monkeypatch, capsys
 ):
