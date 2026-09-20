@@ -22,7 +22,7 @@ you can help check compatibility with your boiler without writing Python.
 | Feature | Read | Change |
 | --- | --- | --- |
 | Boiler operation | Temperatures, water pressure, fan speed, burner and pump status, experimental fault codes | No direct burner or pump control |
-| Room heating | Room temperatures, temperature targets, heating modes and heating-curve settings | Day, night and frost-protection targets, heating mode, selected heating curves |
+| Room heating | Room temperatures, temperature targets, heating modes and heating-curve settings | Day, night and frost-protection targets, heating mode, heating-curve slope |
 | Hot water | Tank temperature, day/night targets and operating mode | Day/night targets and automatic or comfort mode |
 | Weekly schedules | On iSystem: heating program P4, hot-water and auxiliary schedules, and which heating program is selected | On iSystem: write P4, hot-water and auxiliary comfort periods one day at a time. No program selection |
 | Seasonal settings | Summer/winter changeover temperature and boiler temperature limits | Changeover temperature, and boiler limits through the base layout |
@@ -46,33 +46,74 @@ to the panel's temperature settings, not necessarily the time of day.
 
 ## Supported systems
 
-The library implements two ways of addressing the boiler's data. These are
-called *register layouts*: a register is a numbered place where the
-controller exposes a reading or setting.
+This library reads and changes settings on De Dietrich boilers controlled by
+a Diematic panel. It supports two *register layouts*, meaning two ways of
+addressing the boiler's data: the base layout and the iSystem layout. A
+register is a numbered place where the controller exposes a reading or
+setting.
 
 | Control panel / data layout | Python class | Test-script option | Coverage |
 | --- | --- | --- | --- |
-| Diematic 3 or 4, base layout | `Diematic` | `--layout base` | Circuits A/B and boiler controls, including readings from the optional DPSM condensing-boiler module |
+| Diematic 3, m3 or D4, base layout | `Diematic` | `--layout base` | Circuits A/B and boiler controls, including readings the community maps attribute to an optional DPSM module |
 | Diematic iSystem | `DiematicISystem` | `--layout isystem` | Circuits A/B/C, current operating states, weekly schedules, installer settings and diagnostics |
 
-The test iSystem boiler answers both layouts. They overlap, but neither
-contains everything the other does. For example, the base layout includes
-solar temperatures and kW power readings, while iSystem exposes percentage
-power readings instead.
-Diematic Delta is not supported.
+The library can detect which layout your panel answers through
+`async_detect()` or `async_probe()`. Transport failures are recorded per
+probe block as errors rather than treated as absence, and an error on one
+lane does not prevent detection of the other. When no layout can be
+confirmed, `async_detect()` raises `DiematicProbeError`, which is a Modbus
+error, with the probe evidence attached.
 
-The library can detect the register layout with `async_detect()` or
-`async_probe()`. It reads the
-base identity registers and the iSystem identity registers independently. A
-known D3 or m3 code selects the base D3 variant, a known D4 code selects the
-base D4 variant, and a responding iSystem identity block selects
-`DiematicISystem`. An unknown device code raises `DiematicProbeError` with the
-probe evidence attached.
-Transport and device errors are raised as Modbus errors.
+Diematic Delta panels are not supported.
+
+### Hardware families
+
+De Dietrich sold several panel generations. In plain terms:
+
+| Panel | What it means for you |
+| --- | --- |
+| Diematic 3 | An older generation-3 home regulator. Read through the base layout. Not tested by this project, so start read-only and compare with your panel. |
+| Diematic m3 | A compact regulator on newer mid-range boilers. Read through the base layout. Not tested by this project either. |
+| D4 / Diematic 4 | A controller type code, not a boiler model. Panels reporting `D4` answer both layouts, and "Diematic 4" is community shorthand rather than an official De Dietrich product name. The test boiler reports this code. |
+| Diematic iSystem | The flagship panel family with three heating circuits, weekly schedules and installer-level detail. Read through the iSystem layout. |
 
 The reported type code, such as `D4`, does not reliably identify the physical
 boiler model. Use the boiler's label and the panel name when reporting your
 installation.
+
+### Gateway support
+
+The supported gateway path is the official De Dietrich GTW26, also sold as
+AD325. It connects Diematic m3 and iSystem panels to a Modbus RTU network.
+The library talks to the controller behind it and never to the gateway
+itself, so a direct RS485 connection works too.
+
+Other De Dietrich communication hardware, such as the GTW08 gateway, the
+DDBox, the AD286 and AD287 interface boards, and VM iSystem cascade modules,
+is not supported. Their Modbus data is not interchangeable with either
+layout.
+
+### What is supported and verified
+
+Readings are available on both layouts, including temperatures, burner and
+pump status, heating and hot-water targets and modes, and fault codes.
+Weekly schedules, current operating states, installer settings and
+diagnostics are iSystem-only. On the single tested iSystem installation the
+verified writes are the hot-water and circuit B day targets, circuit B
+heating modes, one-day circuit B schedule writes and the clock. Circuit C
+mode writes are implemented but their equivalence is assumed, not
+installed-hardware proof, and the test installation has no circuit A, so
+circuit A writes are rejected on that unit. Base-layout writes are
+implemented. One of them, the hot-water pump delay, passed a live write,
+readback and restore through the iSystem test installation, but no
+base-layout write has been tested on a base-layout boiler. Holiday mode and
+program selection are read-only on both layouts.
+
+Hardware validation so far comes from one iSystem installation, so reports
+from other panels are welcome. The test boiler answers both layouts. They
+overlap, but neither contains everything the other does. For example, the
+base layout includes solar temperatures and kW power readings, while
+iSystem exposes percentage power readings instead.
 
 ## Test your boiler
 
@@ -118,8 +159,10 @@ uv run --extra cli scripts/read_diematic.py 192.168.1.50:502 --unit 10 --layout 
 
 A bare `HOST:PORT` is rewritten to `socket://HOST:PORT` with `--transport
 serial`. Replace `192.168.1.50` and `502` with your gateway's address and
-port. Replace `10` if your controller uses a different Modbus address. These
-are examples, not values the script can discover for you.
+port. Serial-over-TCP gateways often use a port other than 502, so check
+your adapter's setting. Replace `10` if your controller uses a different
+Modbus address. These are examples, not values the script can discover for
+you.
 
 For a plain Modbus TCP gateway, use an explicit `tcp://` target:
 
@@ -161,6 +204,11 @@ uv run --extra cli scripts/read_diematic.py 192.168.1.50 --port 502 \
   --raw-range 507 4 --raw-range 309 39
 ```
 
+For presence diagnostics, add `--check-presence`. It prints, per circuit, the
+sensor readings behind the presence flag and why the circuit was marked
+present: forced, the first live sensor reading, or all readings at their
+sentinel values. It is read-only.
+
 `--variant 3` or `--variant 4` affects only the library's base-layout heating
 and hot-water mode changes. It does not select the layout and has no effect
 on this read-only test. The script defaults to variant 3 and layout `base`.
@@ -175,8 +223,9 @@ you explicitly add `--probe-write`.
 2. Compare outdoor, boiler, room and hot-water temperatures with the panel.
    Compare measured temperatures with measurements, and targets with targets.
 3. Check the day/night targets and modes for the circuits you actually have.
-   The `circuit_*_present` flags only mean that a room-temperature reading is
-   available. `False` does not prove the heating circuit is absent.
+   The `circuit_*_present` flags mean that at least one live circuit reading
+   is available, such as a room, calculated, supply or limit temperature.
+   `False` does not prove the heating circuit is absent.
 4. On iSystem, compare the displayed heating schedules with **P4**, even if
    the panel currently runs P1, P2 or P3. Check the hot-water schedule too.
    The script displays the end of a day as `24:00`.
@@ -295,8 +344,9 @@ with the partial result attached as `.detection`.
 The base identity probe reads registers `3-6`, `108-110`, and `457`. The
 iSystem identity probe reads `600` and `679-684`. Unsupported address and
 function responses mean that a layout is not present. Connection, timeout,
-protocol, gateway, and device errors are not treated as layout detection
-results.
+protocol, gateway, and device errors are recorded per probe block as errors,
+and a lane whose blocks all succeeded can still be detected when the other
+lane fails.
 
 ### Read values
 
@@ -363,8 +413,10 @@ omitted from later reports. `report.complete` means no reported read failures
 in that call, not that every value is new. Create a new regulator object
 over the same unit to reread cached settings and schedules after panel edits.
 
-The `circuit_*_present` properties check for a room-temperature reading.
-Constructor options such as `force_circuit_b=True` override that flag only.
+The `circuit_*_present` properties report whether the library found a live
+circuit reading. Depending on the layout, that evidence can come from a room,
+calculated, supply, or limit-temperature field. Constructor options such as
+`force_circuit_b=True` override that flag only.
 They do not add hardware support or change which registers are read or written.
 
 For debugging, `async_read_raw()` reads the registers mapped by the library
@@ -482,9 +534,10 @@ library. Pump and burner status are controller-reported states, not
 independent proof of water flow or combustion. There is no energy-total,
 fuel-consumption, or direct pump/burner control API.
 
-The iSystem `sensors.instant_power` field uses register 613 and follows the
-MCA panel's `MOM.VERM.KETEL` percentage during a live burner ramp on the tested
-installation. Its scale and availability remain generation-qualified.
+The iSystem `sensors.instant_power` field uses register 613. It is an
+unverified raw output candidate: the available captures did not include a
+simultaneous panel percentage comparison, and a later timed series did not track
+the burner consistently. Its scale and availability remain generation-qualified.
 
 ### Heating and hot water
 
@@ -559,8 +612,9 @@ Python syntax. Both layouts also read the clock and reported type code from
 `identity.software_version`. Clock fields are `hour`, `minute`, `weekday`,
 `day`, `month`, and `year`, returned as integers rather than a combined
 datetime. A reported year of `26` stays `26`.
-The external frost-protection threshold is available only as the read-only
-`settings.ext_frost_threshold` on the base layout.
+The external frost-protection threshold is available as
+`settings.ext_frost_threshold` on the base layout. It is writable from 0 to
+10 °C, but the write has not been verified on a base-layout boiler.
 
 Supported mode values:
 
@@ -615,11 +669,12 @@ as numbers rather than inventing an explanation.
 | A/B/C circuit type codes | `circuit_a.circuit_type`, `circuit_b.circuit_type`, `circuit_c.circuit_type` |
 | Circuit A minimum/maximum temperatures (°C) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
 | Mixing-valve temperature adjustment (°C) and bandwidth | `three_way_valve_temp_shift`, `three_way_valve_bandwidth` |
-| Calculated target (°C), reported modulated power (%) and output-state code | `calc_setpoint`, `modulated_power`, `output_state` |
+| Calculated target (°C) and reported modulated power (%) | `config.calc_setpoint`, `config.modulated_power` |
 
 The following **`diagnostics` fields refresh on each update**. Except for
-`aux_active_mode` and `dhw_priority`, they are raw numbers, not decoded
-explanations or Boolean fault flags.
+`aux_active_mode`, `dhw_priority`, and the unverified `auxiliary_*_type`
+community-map enums, they are raw numbers, not decoded explanations or Boolean
+fault flags. The auxiliary type decode has not been compared with the panel.
 
 | Information | Fields within `diagnostics` |
 | --- | --- |
@@ -627,7 +682,7 @@ explanations or Boolean fault flags.
 | Hot-water loading priority, decoded as `HotWaterPriority` (total, sliding or none) | `dhw_priority` |
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
-| Boiler state, system input state and auxiliary type codes | `boiler_state`, `system_input_state`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
+| System input state and auxiliary type codes | `system_input_state`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
 
 ### Known limits
 
@@ -676,6 +731,12 @@ writes both back with each register's own heating bits preserved. iSystem uses
 reports the current hot-water state, not its requested mode. Only base-layout Diematic 4 requests a panel
 refresh. Never read refresh register 13 back: on the test boiler it returned
 the first word of the previous response.
+
+The test boiler answers two lanes on one wire: a console/native lane with
+registers such as 17, 26 and 384-470, and a GTW26-facing lane with registers
+600 to 685. The lanes share encodings but their address meanings are proven
+only per lane, so register meanings must not be merged across lanes or
+imported from the M3, GTW08 or VM documents.
 
 Read-only checks on 2026-09-05 found similar behavior at alarm register 465:
 reading 70-110 followed by 427-465 returned `5` as the alarm, matching register
