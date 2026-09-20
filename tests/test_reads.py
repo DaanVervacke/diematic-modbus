@@ -2,6 +2,7 @@ import pytest
 from modbus_connection.mock import MockModbusUnit
 
 from diematic_modbus import Diematic, HeatingMode, HotWaterMode, HotWaterPriority
+from diematic_modbus.components import HOLDING_WINDOWS
 
 
 def _seed(unit: MockModbusUnit) -> None:
@@ -79,6 +80,35 @@ async def test_reads_decode_across_bundles(mock_modbus_unit):
     assert diematic.circuit_a.pump_on is True
 
     assert diematic.identity.year == 25
+
+
+async def test_base_pooled_reads_stay_inside_windows(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    diematic = Diematic(mock_modbus_unit)
+
+    await diematic.async_update()
+
+    blocks = [
+        (event.address, event.count)
+        for event in mock_modbus_unit.read_events
+        if event.register_type == "holding"
+    ]
+    assert blocks
+    for start, count in blocks:
+        end = start + count - 1
+        assert (
+            sum(
+                window_start <= start and end <= window_end
+                for window_start, window_end in HOLDING_WINDOWS
+            )
+            == 1
+        )
+    for window_start, window_end in HOLDING_WINDOWS:
+        assert any(
+            window_start <= start and end <= window_end
+            for start, count in blocks
+            for end in (start + count - 1,)
+        )
 
 
 @pytest.mark.parametrize(
