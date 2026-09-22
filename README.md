@@ -124,7 +124,7 @@ or write a program.
 
 ### Before you start
 
-You need Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), a copy of this
+You need Python 3.14 or newer, [uv](https://docs.astral.sh/uv/), a copy of this
 repository, and a working connection to the controller's Modbus port.
 
 The script supports plain Modbus TCP, RTU-over-TCP serial servers, and direct
@@ -306,7 +306,7 @@ choose to run it.
 
 ## Use the Python library
 
-The package requires Python 3.12+. Install it from PyPI into your
+The package requires Python 3.14+. Install it from PyPI into your
 application's virtual environment:
 
 ```shell
