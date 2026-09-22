@@ -7,13 +7,13 @@ name = "diematic-modbus"
 dynamic = ["version"]
 description = "Read and control a De Dietrich Diematic heating regulator over Modbus"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 keywords = ["modbus", "diematic", "de-dietrich", "boiler", "heating", "home-assistant"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Topic :: Home Automation",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = ["modbus-connection>=4.12.1,<5"]
 
