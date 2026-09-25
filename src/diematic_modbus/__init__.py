@@ -14,7 +14,7 @@ from .enums import (
     LegionellaProtection,
     NightMode,
 )
-from .faults import MODULENS_FAULTS
+from .faults import C230_FAULTS, MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
 from .models import MODEL_CODES
 from .probe import (
@@ -27,6 +27,7 @@ from .probe import (
 from .regulator import Diematic
 
 __all__ = [
+    "C230_FAULTS",
     "MODEL_CODES",
     "MODULENS_FAULTS",
     "ActiveMode",

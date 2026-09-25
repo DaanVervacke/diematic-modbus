@@ -2,6 +2,7 @@ from datetime import time
 
 import pytest
 
+from diematic_modbus import C230_FAULTS, MODULENS_FAULTS
 from diematic_modbus.enums import ActiveMode, HeatingMode, HotWaterMode
 from diematic_modbus.fields import (
     Float10Field,
@@ -115,3 +116,11 @@ def test_boiler_type_field_decodes_known_and_unknown_codes():
     assert field.convert(24) == "D4"
     assert field.convert(0) == "3-25LP"
     assert field.convert(999) == 999
+
+
+def test_c230_fault_table_differs_from_default_on_zero():
+    assert C230_FAULTS[0x0000] == "NO FAILURE"
+    assert MODULENS_FAULTS[0x0000] == "D3:OUTL S.B FAIL."
+    assert C230_FAULTS[0x0032] == "FAN FAILURE"
+    assert C230_FAULTS[0x1010] == "FAN FAILURE 34"
+    assert 0xFFFF not in C230_FAULTS

@@ -538,6 +538,14 @@ false fault or an apparent no-fault value. Do not use `sensors.alarm` alone
 for fault notifications or assume that `None` confirms a healthy boiler.
 Check the control panel instead.
 
+The official GTW26 M3 list gives two different code tables for register 465,
+one for M3-GT and one for C230. `sensors.alarm` decodes with the M3-GT column
+(`MODULENS_FAULTS`), where `0x0000` is a sensor fault. In the C230 column
+(`C230_FAULTS`), `0x0000` means no failure and codes up to `0x003A` are
+defined. Which column an iSystem follows is not verified. To decode with the
+C230 table, read the raw word through `async_read_raw()` and look it up in
+`C230_FAULTS`.
+
 Temperatures are in °C. The averaging period for power is not defined by the
 library. Pump and burner status are controller-reported states, not
 independent proof of water flow or combustion. There is no energy-total,
@@ -602,6 +610,13 @@ is provided. After a failed refresh, check the update report for stale values.
 
 Limits here are enforced by the library. The boiler may impose additional
 restrictions. Writable values can also be read.
+
+A write returns as soon as the GTW26 acknowledges it. The new value can take a
+few seconds to appear, and the gateway drops some writes silently while still
+acknowledging them. Read the value back after about 10 seconds before relying
+on it. The official list describes read exceptions 6 and 11 while a write is
+pending, but the test boiler never returned them and simply reported the old
+value until the new one landed.
 
 | Control | Base layout | iSystem | Field or method |
 | --- | --- | --- | --- |
