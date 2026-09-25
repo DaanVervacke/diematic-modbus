@@ -28,6 +28,7 @@ from .fields import (
     enum_value,
     fault_code,
     float10,
+    int_clamp,
     masked_enum,
     multiplied_integer,
     schedule_day,
@@ -41,6 +42,9 @@ _MODE_C_ISYSTEM = 667
 
 ISYSTEM_WINDOWS = (
     (8, 8),
+    (9, 9),
+    (61, 61),
+    (102, 102),
     (231, 233),
     (247, 252),
     (263, 299),
@@ -84,6 +88,10 @@ _ZONE_FROST = snap_clamp(0.5, 3.0, 20.0)
 _DHW = snap_clamp(1.0, 10.0, 80.0)
 _SLOPE = snap_clamp(0.1, 0.0, 4.0)
 _SUMMER_WINTER = snap_clamp(0.5, 15.0, 30.5)
+_ZONE_A_MIN = snap_clamp(0.5, 10.0, 50.0)
+_ZONE_A_MAX = snap_clamp(0.5, 20.0, 120.0)
+_ANTICIPATION = snap_clamp(0.1, 0.0, 10.0)
+_DHW_PUMP_DELAY = int_clamp(0, 15)
 
 
 def _permanent_derogation(raw: int) -> bool | None:
@@ -127,6 +135,9 @@ class Sensors(ISystemComponent):
     instant_power = integer(613, signed=False, unit="%")
     smoke_temp = float10(604, unit="°C")
     water_pressure = float10(610, unit="bar")
+    mean_outside_temp = float10(102, unit="°C")
+    burner_starts = multiplied_integer(251, 4, nan=0xFFFF, unit="starts")
+    burner_runtime = integer(252, signed=False, nan=0xFFFF, unit="h")
     burner_on = bit(427, 3)
     hot_water_pump_on = bit(427, 5)
     alarm = fault_code(465, MODULENS_FAULTS)
@@ -138,7 +149,10 @@ class HotWater(ISystemComponent):
     temp = float10(603, unit="°C")
     mode = masked_enum(_MODE_B_ISYSTEM, _HOT_WATER_MASK, HotWaterMode)
     active_mode = masked_enum(640, 0x06, ActiveMode)
-    priority = masked_enum(674, 0xFF, HotWaterPriority)
+    priority = enum_value(674, HotWaterPriority, writable=True, force_fc16=True)
+    pump_delay = integer(
+        61, signed=False, writable=_DHW_PUMP_DELAY, force_fc16=True, unit="min"
+    )
     legionella_protection = enum_value(
         268, LegionellaProtection, writable=True, force_fc16=True
     )
@@ -308,12 +322,21 @@ class Settings(ISystemComponent):
 
     language = enum_value(263, Language)
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
+    outdoor_antifreeze = float10(9, unit="°C")
     boiler_min = float10(677, unit="°C")
     boiler_max = float10(678, unit="°C")
 
 
 class Config(ISystemComponent):
     """Installer settings and output values cached after the first successful read."""
+
+    _on_written: Callable[[Config], None] | None = None
+
+    async def write(self, field: str, value: object) -> None:
+        """Write a config field and re-arm the cached read so it is reread."""
+        await super().write(field, value)
+        if self._on_written is not None:
+            self._on_written(self)
 
     autoadapt_a = float10(247)
     autoadapt_b = float10(248)
@@ -328,17 +351,23 @@ class Config(ISystemComponent):
     zone_a_calibration = float10(275, unit="°C")
     zone_b_calibration = float10(276, unit="°C")
     zone_c_calibration = float10(277, unit="°C")
-    anticipation_a = float10(282, none_values=(101,))
-    anticipation_b = float10(283, none_values=(101,))
-    anticipation_c = float10(284, none_values=(101,))
+    anticipation_a = float10(
+        282, writable=_ANTICIPATION, force_fc16=True, none_values=(101,)
+    )
+    anticipation_b = float10(
+        283, writable=_ANTICIPATION, force_fc16=True, none_values=(101,)
+    )
+    anticipation_c = float10(
+        284, writable=_ANTICIPATION, force_fc16=True, none_values=(101,)
+    )
     footprint_a_day = float10(289, none_values=(150,))
     footprint_a_night = float10(290, none_values=(150,))
     footprint_b_day = float10(291, none_values=(150,))
     footprint_b_night = float10(292, none_values=(150,))
     footprint_c_day = float10(358, none_values=(150,))
     footprint_c_night = float10(359, none_values=(150,))
-    zone_a_min = float10(298, unit="°C")
-    zone_a_max = float10(299, unit="°C")
+    zone_a_min = float10(298, writable=_ZONE_A_MIN, force_fc16=True, unit="°C")
+    zone_a_max = float10(299, writable=_ZONE_A_MAX, force_fc16=True, unit="°C")
     max_fan_speed = integer(305, signed=False, nan=0xFFFF, unit="rpm")
     three_way_valve_temp_shift = float10(426, unit="°C")
     calc_setpoint = float10(436, unit="°C")
@@ -452,6 +481,7 @@ class DiematicISystem(_Regulator):
             },
             _READ_ONCE,
         )
+        self.config._on_written = self._invalidate_read_once
         for program in self.schedules._programs.values():
             program._on_day_written = self._invalidate_read_once
 

@@ -8,6 +8,7 @@ from diematic_modbus import (
     DiematicVariant,
     HeatingMode,
     HotWaterMode,
+    HotWaterPriority,
 )
 from diematic_modbus.fields import ScheduleDayField, _day_intervals
 from diematic_modbus.isystem import SCHEDULE_BASES, WeekProgram
@@ -335,3 +336,58 @@ async def test_known_heating_modes_preserve_unknown_hot_water_bits(
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.set_circuit_b_mode(mode)
     assert mock_modbus_unit.holding[659] == 0xC0 | int(mode)
+
+
+async def test_isystem_hot_water_pump_delay_clamps_and_writes_register_61(
+    mock_modbus_unit,
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.hot_water.write("pump_delay", 3)
+    assert mock_modbus_unit.holding[61] == 3
+    await boiler.hot_water.write("pump_delay", 40)
+    assert mock_modbus_unit.holding[61] == 15
+
+
+async def test_isystem_hot_water_priority_writes_register_674(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.hot_water.write("priority", HotWaterPriority.SLIDING)
+    assert mock_modbus_unit.holding[674] == 1
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "address", "raw"),
+    [
+        ("anticipation_a", 0.14, 282, 1),
+        ("anticipation_b", 20, 283, 100),
+        ("anticipation_c", 0.0, 284, 0),
+        ("zone_a_min", 31.2, 298, 310),
+        ("zone_a_min", 5, 298, 100),
+        ("zone_a_max", 74.0, 299, 740),
+        ("zone_a_max", 200, 299, 1200),
+    ],
+)
+async def test_isystem_config_writes_snap_and_clamp(
+    mock_modbus_unit, field, value, address, raw
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.config.write(field, value)
+    assert mock_modbus_unit.holding[address] == raw
+
+
+async def test_isystem_outdoor_antifreeze_is_read_only(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    with pytest.raises(AttributeError):
+        await boiler.settings.write("outdoor_antifreeze", 5)
+
+
+async def test_isystem_config_write_rearms_cached_read(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    mock_modbus_unit.holding[298] = 300
+    first = await boiler.async_update()
+    assert "config" in first.updated
+    assert "config" not in (await boiler.async_update()).updated
+
+    await boiler.config.write("zone_a_min", 31.0)
+    report = await boiler.async_update()
+    assert "config" in report.updated
+    assert boiler.config.zone_a_min == 31.0

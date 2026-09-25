@@ -117,10 +117,16 @@ def scaled_integer(address: int, divisor: int, *, unit: str) -> NumberField[floa
     )
 
 
-def multiplied_integer(address: int, multiplier: int, *, unit: str) -> NumberField[int]:
+def multiplied_integer(
+    address: int, multiplier: int, *, unit: str, nan: int | None = None
+) -> NumberField[int]:
     """Read an unsigned integer multiplied by a fixed factor."""
     return NumberField(
-        address, signed=False, convert=lambda raw: raw * multiplier, unit=unit
+        address,
+        signed=False,
+        nan=nan,
+        convert=lambda raw: raw * multiplier,
+        unit=unit,
     )
 
 
@@ -250,5 +256,14 @@ def snap_clamp(step: float, low: float, high: float) -> WriteValidator:
     def validate(value: Any) -> float:
         snapped = round(float(value) / step) * step
         return min(max(snapped, low), high)
+
+    return validate
+
+
+def int_clamp(low: int, high: int) -> WriteValidator:
+    """Round requests to a whole number between ``low`` and ``high``."""
+
+    def validate(value: Any) -> int:
+        return min(max(round(float(value)), low), high)
 
     return validate

@@ -624,3 +624,26 @@ async def test_isystem_read_raw_refreshes_decoded_cache(mock_modbus_unit):
     await boiler.async_read_raw()
 
     assert boiler.sensors.boiler_temp == 65.0
+
+
+async def test_isystem_counters_and_outdoor_settings_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update(
+        {9: 0x8032, 61: 2, 102: 196, 251: 0x2B30, 252: 0x7272}
+    )
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.sensors.burner_starts == 44224
+    assert boiler.sensors.burner_runtime == 29298
+    assert boiler.sensors.mean_outside_temp == 19.6
+    assert boiler.settings.outdoor_antifreeze == -5.0
+    assert boiler.hot_water.pump_delay == 2
+
+
+async def test_isystem_absent_counters_decode_as_none(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({251: 0xFFFF, 252: 0xFFFF})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.sensors.burner_starts is None
+    assert boiler.sensors.burner_runtime is None

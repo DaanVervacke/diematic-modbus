@@ -507,7 +507,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Reading | Layout | Python field(s) |
 | --- | --- | --- |
 | Outdoor, boiler, return-water and flue-gas temperatures | Both | `sensors.outdoor_temp`, `boiler_temp`, `return_temp`, `smoke_temp` |
-| Mean outdoor temperature | Base | `sensors.mean_outside_temp` |
+| Mean outdoor temperature | Both | `sensors.mean_outside_temp` |
 | Primary boiler temperature | Base | `settings.primary_boiler_temp` |
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
 | Circuit A supply temperature | iSystem | `circuit_a.supply_temp` |
@@ -517,11 +517,19 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Water pressure (bar), fan speed (rpm), flame-sensing current (µA) | Both | `sensors.water_pressure`, `fan_speed`, `ionization_current` |
 | Instantaneous boiler output, reported as percentage | iSystem | `sensors.instant_power` |
 | Burner and hot-water pump status | Both | `sensors.burner_on`, `hot_water_pump_on` |
+| Burner starts and burner operating hours, matching the panel | iSystem | `sensors.burner_starts`, `sensors.burner_runtime` |
 | Reported pump output (%) | Base | `sensors.pump_power` |
 | Instantaneous and average power (kW) | Base | `sensors.instant_power`, `sensors.average_power` |
 | Solar and solar-tank temperatures | Base | `sensors.solar_temp`, `solar_tank_temp` |
 | Fault label or unknown fault number | Both | `sensors.alarm` |
 | Raw sensor-fault bitmap | Base | `sensors.sensor_faults` |
+
+The iSystem burner counters come from registers 251 and 252. Register 251
+counts starts in steps of 4, so the library multiplies it by 4. On the test
+boiler this gave 44224 starts and 29298 hours, the same values the panel shows
+as `BR.STARTS` and `BR.UREN` in #MEASURES (Dutch `#METINGEN`). The second-stage
+counters 253 and 254 are not exposed because they returned a different value on
+every read.
 
 Fault readings are not reliable on the test iSystem installation: register
 465 can return data left over from a previous reply, producing either a
@@ -558,9 +566,10 @@ The base layout has A/B only, while iSystem has A/B/C.
 | Water supply temperature | B on both layouts | `supply_temp` |
 | Heating-curve slope and room-sensor influence setting | Every exposed circuit | `slope`, `ambient_influence` |
 | Circuit minimum/maximum temperatures | Base B, iSystem B/C | `min_temp`, `max_temp` |
-| Circuit A minimum/maximum temperatures | iSystem, cached | `config.zone_a_min`, `config.zone_a_max` |
+| Circuit A minimum/maximum temperatures | iSystem, cached, writable | `config.zone_a_min`, `config.zone_a_max` |
 | Hot-water temperature, requested mode and day/night targets | Both | `hot_water.temp`, `mode`, `day_target`, `night_target` |
-| Hot-water loading priority | Base, documented register map | `hot_water.priority` |
+| Hot-water loading priority | Base read-only, iSystem writable | `hot_water.priority` |
+| Hot-water pump run-on after heating stops (min) | Both, writable | `hot_water.pump_delay` |
 | Additional hot-water temperature from the DPSM module | Base | `hot_water.temp_dpsm` |
 | Current hot-water operating state | iSystem | `hot_water.active_mode` |
 
@@ -603,6 +612,10 @@ restrictions. Writable values can also be read.
 | Hot-water day/night target | 10 to 80 °C, 1 °C steps | Same | `hot_water.write("day_target", value)` or `"night_target"` |
 | Hot-water mode | Yes | Yes | `set_hot_water_mode()` |
 | Summer/winter changeover temperature | 15 to 30.5 °C, 0.5 °C steps | Same | `settings.write("summer_winter_temp", value)` |
+| Circuit A minimum/maximum flow temperature | Read-only | Minimum 10 to 50 °C, maximum 20 to 120 °C, 0.5 °C steps | `config.write("zone_a_min", value)` or `"zone_a_max"` |
+| Heating anticipation time | Not available | A/B/C: 0 to 10 h, 0.1 h steps | `config.write("anticipation_a", value)` |
+| Hot-water loading priority | Read-only | `HotWaterPriority.TOTAL`, `SLIDING` or `NONE` | `hot_water.write("priority", value)` |
+| Hot-water pump run-on | Writable, no library range limit | 0 to 15 min | `hot_water.write("pump_delay", value)` |
 | Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `settings.boiler_max` |
 | Date and time | `set_clock(datetime)`, untested on a base-layout boiler | `set_clock(datetime)`, verified on the iSystem test boiler | `set_clock()` |
 
@@ -615,6 +628,16 @@ datetime. A reported year of `26` stays `26`.
 The external frost-protection threshold is available as
 `settings.ext_frost_threshold` on the base layout. It is writable from 0 to
 10 °C, but the write has not been verified on a base-layout boiler.
+On iSystem the same register 9 is read-only `settings.outdoor_antifreeze`.
+The official list says only positive values are valid when writing, and the
+test boiler acknowledged writes near its current `-5.0` °C but kept the old value.
+
+The iSystem writes to circuit A limits, anticipation, hot-water priority and
+pump run-on were each tested on the test boiler by writing a nearby value,
+reading it back and restoring the original. Circuit A limits were accepted even
+though circuit A is not installed there. Writing a `config` field refreshes the
+cached `config` values on the next update. An anticipation raw value of 101
+means off and reads as `None`. Writing it is not supported.
 
 Supported mode values:
 
@@ -664,10 +687,10 @@ as numbers rather than inventing an explanation.
 | Control bandwidth and mixing-valve adjustment | `bandwidth`, `three_way_valve_shift` |
 | Minimum running time, burner delay and pump run-on settings | `min_running_time`, `burner_temporisation`, `pump_postrun` |
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
-| A/B/C anticipation settings, without defined units | `anticipation_a`, `anticipation_b`, `anticipation_c` |
+| A/B/C anticipation time in hours, writable | `anticipation_a`, `anticipation_b`, `anticipation_c` |
 | Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |
 | A/B/C circuit type codes | `circuit_a.circuit_type`, `circuit_b.circuit_type`, `circuit_c.circuit_type` |
-| Circuit A minimum/maximum temperatures (°C) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
+| Circuit A minimum/maximum temperatures (°C, writable) and maximum fan speed (rpm) | `zone_a_min`, `zone_a_max`, `max_fan_speed` |
 | Mixing-valve temperature adjustment (°C) and bandwidth | `three_way_valve_temp_shift`, `three_way_valve_bandwidth` |
 | Calculated target (°C) and reported modulated power (%) | `config.calc_setpoint`, `config.modulated_power` |
 
@@ -792,7 +815,7 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Further cross-checks of the iSystem map:
   [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
-- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04.
+- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04. Source of the iSystem registers 9, 61, 102, 251, 252, 268, 282 to 284, 298, 299 and 674, each read and where writable write-tested on the test boiler.
 - Override-state field names and schedule meaning: De Dietrich's own parameter
   tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
   and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).
