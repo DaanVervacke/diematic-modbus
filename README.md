@@ -551,10 +551,18 @@ library. Pump and burner status are controller-reported states, not
 independent proof of water flow or combustion. There is no energy-total,
 fuel-consumption, or direct pump/burner control API.
 
-The iSystem `sensors.instant_power` field uses register 613. It is an
-unverified raw output candidate: the available captures did not include a
-simultaneous panel percentage comparison, and a later timed series did not track
-the burner consistently. Its scale and availability remain generation-qualified.
+The iSystem `sensors.instant_power` field uses register 613. During a forced
+heating run on the test boiler it rose from 0 to 52 along with the fan speed and
+returned to 0 when the burner stopped. Register 503, listed as `POWER %` in the
+official GTW26 M3 list, returned the same value at every sample, so it is not
+exposed separately. It has not been compared with a panel percentage.
+
+The official list limits one read to 40 registers. The library reads up to 55
+iSystem and 60 base-layout registers per request, and a 55-register read
+returned the same values as two shorter reads on the test boiler. The list's
+derogation annex marks bits 6 and 7 of the mode registers as unused, while the
+library decodes bit 6 as hot-water mode and bit 7 as the all-circuits flag from
+earlier panel comparisons.
 
 ### Heating and hot water
 
