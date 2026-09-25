@@ -93,6 +93,8 @@ _ZONE_A_MIN = snap_clamp(0.5, 10.0, 50.0)
 _ZONE_A_MAX = snap_clamp(0.5, 20.0, 120.0)
 _ANTICIPATION = snap_clamp(0.1, 0.0, 10.0)
 _PUMP_DELAY = int_clamp(0, 15)
+_INERTIA = int_clamp(0, 10)
+_BANDWIDTH = snap_clamp(1.0, 4.0, 16.0)
 
 
 def _permanent_derogation(raw: int) -> bool | None:
@@ -347,10 +349,10 @@ class Config(ISystemComponent):
     autoadapt_a = float10(247)
     autoadapt_b = float10(248)
     autoadapt_c = float10(249)
-    building_inertia = integer(264, signed=False)
-    bandwidth = float10(266)
+    building_inertia = integer(264, signed=False, writable=_INERTIA, force_fc16=True)
+    bandwidth = float10(266, writable=_BANDWIDTH, force_fc16=True, unit="K")
     three_way_valve_shift = float10(267)
-    min_running_time = integer(269, signed=False)
+    min_running_time = integer(269, signed=False, unit="s")
     burner_temporisation = integer(271, signed=False)
     pump_postrun = multiplied_integer(272, 2, unit="min")
     outside_calibration = float10(274, unit="°C")

@@ -617,6 +617,7 @@ restrictions. Writable values can also be read.
 | Heating anticipation time | Not available | A/B/C: 0 to 10 h, 0.1 h steps | `config.write("anticipation_a", value)` |
 | Hot-water loading priority | Read-only | `HotWaterPriority.TOTAL`, `SLIDING` or `NONE` | `hot_water.write("priority", value)` |
 | Hot-water pump run-on | Writable, no library range limit | 0 to 15 min | `hot_water.write("pump_delay", value)` |
+| Building inertia and mixing-valve bandwidth | Read-only | Inertia 0 to 10, bandwidth 4 to 16 K in 1 K steps | `config.write("building_inertia", value)` or `"bandwidth"` |
 | Heating pump run-on | Not available | 0 to 15 min | `settings.write("heating_pump_delay", value)` |
 | Night-period behaviour | Not available | `NightMode.STOP` (heating off) or `DECREASE` (reduced temperature) | `settings.write("night_mode", value)` |
 | Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `settings.boiler_max` |
@@ -639,7 +640,16 @@ The iSystem writes to circuit A limits, anticipation, hot-water priority and
 pump run-on were each tested on the test boiler by writing a nearby value,
 reading it back and restoring the original. Circuit A limits were accepted even
 though circuit A is not installed there. Writing a `config` field refreshes the
-cached `config` values on the next update. An anticipation raw value of 101
+cached `config` values on the next update.
+
+The test boiler ignored writes to minimum burner run time (269), burner delay
+(271), generator pump run-on (272), boiler maximum (678) and the auxiliary input
+and output types (741, 744), so those stay read-only. On that boiler 269 is in
+seconds and 272 counts in 2-minute steps, which differs from the official list.
+Circuit types (296, 297, 360) accepted writes but stay read-only because a wrong
+value changes the declared hydraulic layout. Register 263 reads 5 on a panel set
+to Dutch, while the official list says 5 is Spanish, so `settings.language` is
+not trusted for decoding and is not writable. An anticipation raw value of 101
 means off and reads as `None`. Writing it is not supported.
 
 Supported mode values:
@@ -709,7 +719,7 @@ as numbers rather than inventing an explanation.
 | Automatic adjustment values for A/B/C | `autoadapt_a`, `autoadapt_b`, `autoadapt_c` |
 | Language code and building-inertia setting | `settings.language`, `config.building_inertia` |
 | Control bandwidth and mixing-valve adjustment | `bandwidth`, `three_way_valve_shift` |
-| Minimum running time, burner delay and pump run-on settings | `min_running_time`, `burner_temporisation`, `pump_postrun` |
+| Minimum burner run time (s), burner delay and generator pump run-on (min) | `min_running_time`, `burner_temporisation`, `pump_postrun` |
 | Outdoor and A/B/C room-temperature calibration (°C) | `outside_calibration`, `zone_a_calibration`, `zone_b_calibration`, `zone_c_calibration` |
 | A/B/C anticipation time in hours, writable | `anticipation_a`, `anticipation_b`, `anticipation_c` |
 | Day/night values labelled "footprint" in the source maps, meaning not yet verified | `footprint_a_day`, `footprint_a_night`, `footprint_b_day`, `footprint_b_night`, `footprint_c_day`, `footprint_c_night` |

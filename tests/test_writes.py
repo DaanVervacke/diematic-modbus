@@ -400,3 +400,29 @@ async def test_isystem_night_mode_and_heating_pump_delay_write(mock_modbus_unit)
     assert mock_modbus_unit.holding[10] == 0
     await boiler.settings.write("heating_pump_delay", 20)
     assert mock_modbus_unit.holding[11] == 15
+
+
+@pytest.mark.parametrize(
+    ("bundle", "field", "value", "address", "raw"),
+    [
+        ("config", "building_inertia", 4, 264, 4),
+        ("config", "building_inertia", 30, 264, 10),
+        ("config", "bandwidth", 12.4, 266, 120),
+        ("config", "bandwidth", 2, 266, 40),
+    ],
+)
+async def test_isystem_panel_and_tuning_writes(
+    mock_modbus_unit, bundle, field, value, address, raw
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await getattr(boiler, bundle).write(field, value)
+    assert mock_modbus_unit.holding[address] == raw
+
+
+@pytest.mark.parametrize(
+    "field", ["min_running_time", "burner_temporisation", "pump_postrun"]
+)
+async def test_isystem_psu_settings_stay_read_only(mock_modbus_unit, field):
+    boiler = DiematicISystem(mock_modbus_unit)
+    with pytest.raises(AttributeError):
+        await boiler.config.write(field, 1)
