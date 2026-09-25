@@ -13,6 +13,7 @@ from diematic_modbus import (
     HotWaterMode,
     HotWaterPriority,
     Language,
+    NightMode,
 )
 from diematic_modbus.isystem import ISYSTEM_WINDOWS, SCHEDULE_BASES
 
@@ -647,3 +648,16 @@ async def test_isystem_absent_counters_decode_as_none(mock_modbus_unit):
     await boiler.async_update()
     assert boiler.sensors.burner_starts is None
     assert boiler.sensors.burner_runtime is None
+
+
+async def test_isystem_output_bits_and_secondary_setpoint_decode(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding.update({474: 0x0019, 734: 0x01CC, 735: 0x0008, 10: 1})
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.outputs.burner_stage_1_on is True
+    assert boiler.outputs.hydraulic_valve_close is True
+    assert boiler.outputs.boiler_pump_on is True
+    assert boiler.outputs.secondary_pump_on is True
+    assert boiler.sensors.secondary_calc_temp == 46.0
+    assert boiler.settings.night_mode is NightMode.DECREASE

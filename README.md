@@ -510,6 +510,7 @@ output to Python usage. Unless listed as a control, a value is read-only.
 | Mean outdoor temperature | Both | `sensors.mean_outside_temp` |
 | Primary boiler temperature | Base | `settings.primary_boiler_temp` |
 | Boiler's calculated temperature target | Both | `sensors.calc_boiler_temp` |
+| Secondary calculated temperature target | iSystem | `sensors.secondary_calc_temp` |
 | Circuit A supply temperature | iSystem | `circuit_a.supply_temp` |
 | Auxiliary 1, auxiliary 2 and universal input temperatures | iSystem | `sensors.auxiliary_1_temp`, `sensors.auxiliary_2_temp`, `sensors.universal_temp` |
 | Additional outdoor reading from the boiler bus | Base | `sensors.outdoor_temp_bus` |
@@ -616,6 +617,8 @@ restrictions. Writable values can also be read.
 | Heating anticipation time | Not available | A/B/C: 0 to 10 h, 0.1 h steps | `config.write("anticipation_a", value)` |
 | Hot-water loading priority | Read-only | `HotWaterPriority.TOTAL`, `SLIDING` or `NONE` | `hot_water.write("priority", value)` |
 | Hot-water pump run-on | Writable, no library range limit | 0 to 15 min | `hot_water.write("pump_delay", value)` |
+| Heating pump run-on | Not available | 0 to 15 min | `settings.write("heating_pump_delay", value)` |
+| Night-period behaviour | Not available | `NightMode.STOP` (heating off) or `DECREASE` (reduced temperature) | `settings.write("night_mode", value)` |
 | Boiler minimum/maximum temperature | Writable, no library range limit | Read-only | `settings.boiler_min`, `settings.boiler_max` |
 | Date and time | `set_clock(datetime)`, untested on a base-layout boiler | `set_clock(datetime)`, verified on the iSystem test boiler | `set_clock()` |
 
@@ -669,6 +672,27 @@ time through `schedules.set_day("<name>", weekday, periods)`, verified
 on the test boiler (circuit B, plain per-day three-register writes). Heating
 programs P1, P2 and P3 cannot be read or written as weekly schedules through
 this library. Selecting which program is active is not implemented.
+
+### Output states
+
+On iSystem, `outputs` refreshes on each update and exposes the raw primary (474),
+secondary (475) and boiler-state (735) words as `primary`, `secondary` and
+`boiler_state`, plus these decoded bits:
+
+| Output | Field within `outputs` |
+| --- | --- |
+| Burner stage 1 firing | `burner_stage_1_on` |
+| Hydraulic valve closing | `hydraulic_valve_close` |
+| Boiler pump running | `boiler_pump_on` |
+| Secondary pump running | `secondary_pump_on` |
+| Hot-water, circuit A/B/C and auxiliary 1 to 3 pumps, circuit valve commands, phone output | `dhw_pump_on`, `circuit_*_pump_on`, `circuit_*_valve_open`, `circuit_*_valve_close`, `auxiliary_*_pump_on`, `phone_output_on` |
+
+The first four bits were watched on the test boiler during a forced heating
+demand: `burner_stage_1_on` followed `sensors.burner_on` exactly, and the boiler
+pump stayed on during its run-on after the burner stopped. Burner stage 2, the
+hydraulic valve open bit and the cascade and circuit-off boiler-state bits never
+changed on this single-stage, single-boiler installation, so they are not
+decoded. Read them from the raw words if needed.
 
 ### Installer settings and diagnostics
 
@@ -815,7 +839,7 @@ the De Dietrich register sheet, with further checks on the test boiler:
 - Further cross-checks of the iSystem map:
   [piwai/diematic](https://github.com/piwai/diematic) and
   [gsternagl/python-diematic](https://github.com/gsternagl/python-diematic).
-- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04. Source of the iSystem registers 9, 61, 102, 251, 252, 268, 282 to 284, 298, 299 and 674, each read and where writable write-tested on the test boiler.
+- Official GTW26 M3 register list: De Dietrich, `Liste des paramètres DIEMATIC M3 pour GTW26`, document `7724677-001-01`, 2018-12-04. Source of the iSystem registers 9, 10, 11, 61, 102, 251, 252, 268, 282 to 284, 298, 299, 474, 674, 734 and 735, each read and where writable write-tested on the test boiler.
 - Override-state field names and schedule meaning: De Dietrich's own parameter
   tables shared on the Jeedom community forum (the "MODBUS DD Complete" table
   and the Lacroix Sofrel S500 De Dietrich Diematic configuration sheet).

@@ -76,6 +76,13 @@ class AuxiliaryType(IntEnum):
     FAILURE = 4
 
 
+class NightMode(IntEnum):
+    """What heating does during the reduced (night) period."""
+
+    STOP = 0
+    DECREASE = 1
+
+
 class LegionellaProtection(IntEnum):
     """Domestic hot-water legionella protection schedule."""
 

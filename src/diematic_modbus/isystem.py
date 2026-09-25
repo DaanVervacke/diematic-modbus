@@ -19,6 +19,7 @@ from .enums import (
     HotWaterPriority,
     Language,
     LegionellaProtection,
+    NightMode,
 )
 from .faults import MODULENS_FAULTS
 from .fields import (
@@ -42,7 +43,7 @@ _MODE_C_ISYSTEM = 667
 
 ISYSTEM_WINDOWS = (
     (8, 8),
-    (9, 9),
+    (9, 11),
     (61, 61),
     (102, 102),
     (231, 233),
@@ -91,7 +92,7 @@ _SUMMER_WINTER = snap_clamp(0.5, 15.0, 30.5)
 _ZONE_A_MIN = snap_clamp(0.5, 10.0, 50.0)
 _ZONE_A_MAX = snap_clamp(0.5, 20.0, 120.0)
 _ANTICIPATION = snap_clamp(0.1, 0.0, 10.0)
-_DHW_PUMP_DELAY = int_clamp(0, 15)
+_PUMP_DELAY = int_clamp(0, 15)
 
 
 def _permanent_derogation(raw: int) -> bool | None:
@@ -126,6 +127,7 @@ class Sensors(ISystemComponent):
     outdoor_temp = float10(601, unit="°C")
     boiler_temp = float10(602, unit="°C")
     calc_boiler_temp = float10(620, unit="°C")
+    secondary_calc_temp = float10(734, unit="°C")
     return_temp = float10(607, unit="°C")
     auxiliary_1_temp = float10(622, unit="°C")
     auxiliary_2_temp = float10(623, unit="°C")
@@ -151,7 +153,7 @@ class HotWater(ISystemComponent):
     active_mode = masked_enum(640, 0x06, ActiveMode)
     priority = enum_value(674, HotWaterPriority, writable=True, force_fc16=True)
     pump_delay = integer(
-        61, signed=False, writable=_DHW_PUMP_DELAY, force_fc16=True, unit="min"
+        61, signed=False, writable=_PUMP_DELAY, force_fc16=True, unit="min"
     )
     legionella_protection = enum_value(
         268, LegionellaProtection, writable=True, force_fc16=True
@@ -323,6 +325,10 @@ class Settings(ISystemComponent):
     language = enum_value(263, Language)
     summer_winter_temp = float10(8, writable=_SUMMER_WINTER, force_fc16=True, unit="°C")
     outdoor_antifreeze = float10(9, unit="°C")
+    night_mode = enum_value(10, NightMode, writable=True, force_fc16=True)
+    heating_pump_delay = integer(
+        11, signed=False, writable=_PUMP_DELAY, force_fc16=True, unit="min"
+    )
     boiler_min = float10(677, unit="°C")
     boiler_max = float10(678, unit="°C")
 
@@ -381,6 +387,10 @@ class Outputs(ISystemComponent):
     primary = integer(474, signed=False)
     secondary = integer(475, signed=False)
     boiler_state = integer(735, signed=False)
+    burner_stage_1_on = bit(474, 0)
+    hydraulic_valve_close = bit(474, 3)
+    boiler_pump_on = bit(474, 4)
+    secondary_pump_on = bit(735, 3)
     dhw_pump_on = bit(475, 0)
     circuit_a_pump_on = bit(475, 1)
     circuit_a_valve_open = bit(475, 2)

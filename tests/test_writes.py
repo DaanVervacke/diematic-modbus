@@ -9,6 +9,7 @@ from diematic_modbus import (
     HeatingMode,
     HotWaterMode,
     HotWaterPriority,
+    NightMode,
 )
 from diematic_modbus.fields import ScheduleDayField, _day_intervals
 from diematic_modbus.isystem import SCHEDULE_BASES, WeekProgram
@@ -391,3 +392,11 @@ async def test_isystem_config_write_rearms_cached_read(mock_modbus_unit):
     report = await boiler.async_update()
     assert "config" in report.updated
     assert boiler.config.zone_a_min == 31.0
+
+
+async def test_isystem_night_mode_and_heating_pump_delay_write(mock_modbus_unit):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.settings.write("night_mode", NightMode.STOP)
+    assert mock_modbus_unit.holding[10] == 0
+    await boiler.settings.write("heating_pump_delay", 20)
+    assert mock_modbus_unit.holding[11] == 15

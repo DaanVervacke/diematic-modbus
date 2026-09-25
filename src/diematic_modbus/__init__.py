@@ -12,6 +12,7 @@ from .enums import (
     HotWaterPriority,
     Language,
     LegionellaProtection,
+    NightMode,
 )
 from .faults import MODULENS_FAULTS
 from .isystem import DiematicISystem, Schedules, WeekProgram
@@ -45,6 +46,7 @@ __all__ = [
     "Identity",
     "Language",
     "LegionellaProtection",
+    "NightMode",
     "ProbeBlock",
     "Schedules",
     "Sensors",
