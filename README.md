@@ -620,10 +620,10 @@ value until the new one landed.
 
 | Control | Base layout | iSystem | Field or method |
 | --- | --- | --- | --- |
-| Heating day/night target | A/B: 5 to 30 °C, 0.5 °C steps | A/B/C: 10 to 30 °C, 0.5 °C steps | `circuit_*.write("day_target", value)` or `"night_target"` |
+| Heating day/night target | A/B: 5 to 30 °C, 0.5 °C steps | A/B/C: day 10 to 30 °C, night 5 to 30 °C, 0.5 °C steps | `circuit_*.write("day_target", value)` or `"night_target"` |
 | Heating frost-protection target | A/B: 5 to 30 °C, 0.5 °C steps | A/B/C: 3 to 20 °C, 0.5 °C steps | `circuit_*.write("antifreeze_target", value)` |
 | Heating-curve slope | A/B: 0 to 4, 0.1 steps | A/B/C: 0 to 4, 0.1 steps | `circuit_*.write("slope", value)` |
-| Heating-circuit minimum/maximum flow temperature | Read-only | B/C: writable, no library range limit | `circuit_*.write("min_temp", value)` or `"max_temp"` |
+| Heating-circuit minimum/maximum flow temperature | Read-only | B/C: minimum 10 to 30 °C, maximum 50 to 95 °C, 0.5 °C steps | `circuit_*.write("min_temp", value)` or `"max_temp"` |
 | Heating mode | A/B | A/B/C | `set_circuit_a_mode()`, `set_circuit_b_mode()`, `set_circuit_c_mode()` |
 | Hot-water day/night target | 10 to 80 °C, 1 °C steps | Same | `hot_water.write("day_target", value)` or `"night_target"` |
 | Hot-water mode | Yes | Yes | `set_hot_water_mode()` |
@@ -746,7 +746,10 @@ as numbers rather than inventing an explanation.
 The following **`diagnostics` fields refresh on each update**. Except for
 `aux_active_mode`, `dhw_priority`, and the unverified `auxiliary_*_type`
 community-map enums, they are raw numbers, not decoded explanations or Boolean
-fault flags. The auxiliary type decode has not been compared with the panel.
+fault flags. The auxiliary type decode has not been compared with the panel. Auxiliary 1 uses
+`AuxiliaryType` and auxiliary 2 and 3 use `AuxiliaryOutputType`, because the
+official list numbers their options differently. `VM_PUMP` follows the
+official label "VM PUMP" and its hardware meaning is not verified.
 
 | Information | Fields within `diagnostics` |
 | --- | --- |
@@ -754,7 +757,7 @@ fault flags. The auxiliary type decode has not been compared with the panel.
 | Hot-water loading priority, decoded as `HotWaterPriority` (total, sliding or none) | `dhw_priority` |
 | Auxiliary current operating state, decoded as `ActiveMode` | `aux_active_mode` |
 | PCU controller state, substate, blocking and lockout codes | `pcu_state`, `pcu_substate`, `pcu_block`, `pcu_lock` |
-| System input state and auxiliary type codes | `system_input_state`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
+| Auxiliary 1 input function (`AuxiliaryInput`) and auxiliary type codes | `auxiliary_1_input`, `auxiliary_1_type`, `auxiliary_2_type`, `auxiliary_3_type` |
 
 ### Known limits
 
