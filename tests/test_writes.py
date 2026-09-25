@@ -246,9 +246,9 @@ async def test_isystem_circuit_slope_writes_and_clamps(mock_modbus_unit):
 async def test_isystem_circuit_min_max_write_plain(mock_modbus_unit):
     boiler = DiematicISystem(mock_modbus_unit)
     await boiler.circuit_b.write("min_temp", 12.0)
-    await boiler.circuit_b.write("max_temp", 43.0)
+    await boiler.circuit_b.write("max_temp", 63.0)
     assert mock_modbus_unit.holding[662] == 120
-    assert mock_modbus_unit.holding[663] == 430
+    assert mock_modbus_unit.holding[663] == 630
     await boiler.circuit_c.write("min_temp", 15.0)
     await boiler.circuit_c.write("max_temp", 55.0)
     assert mock_modbus_unit.holding[670] == 150
@@ -426,3 +426,23 @@ async def test_isystem_psu_settings_stay_read_only(mock_modbus_unit, field):
     boiler = DiematicISystem(mock_modbus_unit)
     with pytest.raises(AttributeError):
         await boiler.config.write(field, 1)
+
+
+@pytest.mark.parametrize(
+    ("circuit", "field", "value", "address", "raw"),
+    [
+        ("circuit_b", "night_target", 4, 657, 50),
+        ("circuit_b", "night_target", 9.2, 657, 90),
+        ("circuit_a", "night_target", 35, 651, 300),
+        ("circuit_b", "min_temp", 5, 662, 100),
+        ("circuit_c", "min_temp", 40, 670, 300),
+        ("circuit_b", "max_temp", 120, 663, 950),
+        ("circuit_c", "max_temp", 42.3, 671, 500),
+    ],
+)
+async def test_isystem_circuit_limits_clamp(
+    mock_modbus_unit, circuit, field, value, address, raw
+):
+    boiler = DiematicISystem(mock_modbus_unit)
+    await getattr(boiler, circuit).write(field, value)
+    assert mock_modbus_unit.holding[address] == raw

@@ -67,13 +67,33 @@ class Language(IntEnum):
 
 
 class AuxiliaryType(IntEnum):
-    """Configured auxiliary output type."""
+    """Configured auxiliary 1 output type, from the official GTW26 M3 list."""
 
     PROGRAM = 0
     PRIMARY_PUMP = 1
-    THREE_WAY_VALVE_PUMP = 2
+    VM_PUMP = 2
     DHW_LOAD = 3
     FAILURE = 4
+
+
+class AuxiliaryOutputType(IntEnum):
+    """Configured auxiliary 2 and 3 output type, from the official list, unverified."""
+
+    PRIMARY_PUMP = 0
+    VM_PUMP = 1
+    DHW_LOAD = 2
+    DHW_LOAD_2 = 3
+    FAILURE = 4
+
+
+class AuxiliaryInput(IntEnum):
+    """Configured auxiliary 1 input function, from the official M3-GT list."""
+
+    DISABLED = 0
+    ROOM_SENSOR_A = 1
+    ROOM_SENSOR_B = 2
+    ROOM_SENSOR_C = 3
+    ROOM_SENSOR_AUX = 4
 
 
 class NightMode(IntEnum):

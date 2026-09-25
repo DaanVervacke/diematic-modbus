@@ -11,6 +11,8 @@ from modbus_connection.model import Component, NumberField, bit, integer
 from ._base import _HEATING_MASK, _HOT_WATER_MASK, ClockPolicy, _Regulator
 from .enums import (
     ActiveMode,
+    AuxiliaryInput,
+    AuxiliaryOutputType,
     AuxiliaryType,
     CircuitType,
     DiematicVariant,
@@ -85,6 +87,9 @@ _DAY_WINDOWS = tuple(
 _READ_ONCE = frozenset(f"schedules.{name}" for name in _SCHEDULE_BASES) | {"config"}
 
 _ZONE_DAY = snap_clamp(0.5, 10.0, 30.0)
+_ZONE_NIGHT = snap_clamp(0.5, 5.0, 30.0)
+_ZONE_BC_MIN = snap_clamp(0.5, 10.0, 30.0)
+_ZONE_BC_MAX = snap_clamp(0.5, 50.0, 95.0)
 _ZONE_FROST = snap_clamp(0.5, 3.0, 20.0)
 _DHW = snap_clamp(1.0, 10.0, 80.0)
 _SLOPE = snap_clamp(0.1, 0.0, 4.0)
@@ -184,7 +189,7 @@ class CircuitA(ISystemComponent):
     ambient_influence = integer(654, signed=False)
     slope = float10(655, writable=_SLOPE, force_fc16=True, unit="K/K")
     day_target = float10(650, writable=_ZONE_DAY, force_fc16=True, unit="°C")
-    night_target = float10(651, writable=_ZONE_DAY, force_fc16=True, unit="°C")
+    night_target = float10(651, writable=_ZONE_NIGHT, force_fc16=True, unit="°C")
     antifreeze_target = float10(652, writable=_ZONE_FROST, force_fc16=True, unit="°C")
 
 
@@ -210,10 +215,10 @@ class CircuitB(ISystemComponent):
     valve_closing = bit(428, 0)
     ambient_influence = integer(660, signed=False)
     slope = float10(661, writable=_SLOPE, force_fc16=True, unit="K/K")
-    min_temp = float10(662, writable=True, force_fc16=True, unit="°C")
-    max_temp = float10(663, writable=True, force_fc16=True, unit="°C")
+    min_temp = float10(662, writable=_ZONE_BC_MIN, force_fc16=True, unit="°C")
+    max_temp = float10(663, writable=_ZONE_BC_MAX, force_fc16=True, unit="°C")
     day_target = float10(656, writable=_ZONE_DAY, force_fc16=True, unit="°C")
-    night_target = float10(657, writable=_ZONE_DAY, force_fc16=True, unit="°C")
+    night_target = float10(657, writable=_ZONE_NIGHT, force_fc16=True, unit="°C")
     antifreeze_target = float10(658, writable=_ZONE_FROST, force_fc16=True, unit="°C")
 
 
@@ -235,10 +240,10 @@ class CircuitC(ISystemComponent):
     all_circuits_derogation = bit(_MODE_C_ISYSTEM, 7)
     ambient_influence = integer(668, signed=False)
     slope = float10(669, writable=_SLOPE, force_fc16=True, unit="K/K")
-    min_temp = float10(670, writable=True, force_fc16=True, unit="°C")
-    max_temp = float10(671, writable=True, force_fc16=True, unit="°C")
+    min_temp = float10(670, writable=_ZONE_BC_MIN, force_fc16=True, unit="°C")
+    max_temp = float10(671, writable=_ZONE_BC_MAX, force_fc16=True, unit="°C")
     day_target = float10(664, writable=_ZONE_DAY, force_fc16=True, unit="°C")
-    night_target = float10(665, writable=_ZONE_DAY, force_fc16=True, unit="°C")
+    night_target = float10(665, writable=_ZONE_NIGHT, force_fc16=True, unit="°C")
     antifreeze_target = float10(666, writable=_ZONE_FROST, force_fc16=True, unit="°C")
 
 
@@ -419,10 +424,10 @@ class Diagnostics(ISystemComponent):
     pcu_substate = integer(711, signed=False)
     pcu_block = integer(712, signed=False)
     pcu_lock = integer(713, signed=False)
-    system_input_state = integer(741, signed=False)
+    auxiliary_1_input = enum_value(741, AuxiliaryInput)
     auxiliary_1_type = enum_value(744, AuxiliaryType)
-    auxiliary_2_type = enum_value(745, AuxiliaryType)
-    auxiliary_3_type = enum_value(746, AuxiliaryType)
+    auxiliary_2_type = enum_value(745, AuxiliaryOutputType)
+    auxiliary_3_type = enum_value(746, AuxiliaryOutputType)
 
 
 class Identity(ISystemComponent):

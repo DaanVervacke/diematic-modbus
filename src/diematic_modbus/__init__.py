@@ -4,6 +4,8 @@ from ._base import UpdateReport
 from .components import CircuitA, CircuitB, HotWater, Identity, Sensors, Settings
 from .enums import (
     ActiveMode,
+    AuxiliaryInput,
+    AuxiliaryOutputType,
     AuxiliaryType,
     CircuitType,
     DiematicVariant,
@@ -31,6 +33,8 @@ __all__ = [
     "MODEL_CODES",
     "MODULENS_FAULTS",
     "ActiveMode",
+    "AuxiliaryInput",
+    "AuxiliaryOutputType",
     "AuxiliaryType",
     "CircuitA",
     "CircuitB",

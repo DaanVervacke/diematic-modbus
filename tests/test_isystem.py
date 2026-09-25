@@ -5,6 +5,8 @@ from modbus_connection.mock import MockModbusUnit
 
 from diematic_modbus import (
     ActiveMode,
+    AuxiliaryInput,
+    AuxiliaryOutputType,
     AuxiliaryType,
     CircuitType,
     DiematicISystem,
@@ -233,8 +235,8 @@ async def test_isystem_config_and_diagnostics_decode(mock_modbus_unit):
     assert boiler.diagnostics.boiler_active_mode == 5
     assert boiler.diagnostics.pcu_block == 255
     assert boiler.diagnostics.auxiliary_1_type is AuxiliaryType.DHW_LOAD
-    assert boiler.diagnostics.auxiliary_2_type is AuxiliaryType.PRIMARY_PUMP
-    assert boiler.diagnostics.auxiliary_3_type is AuxiliaryType.FAILURE
+    assert boiler.diagnostics.auxiliary_2_type is AuxiliaryOutputType.VM_PUMP
+    assert boiler.diagnostics.auxiliary_3_type is AuxiliaryOutputType.FAILURE
 
 
 async def test_isystem_config_sentinels_decode_as_missing_values(mock_modbus_unit):
@@ -661,3 +663,11 @@ async def test_isystem_output_bits_and_secondary_setpoint_decode(mock_modbus_uni
     assert boiler.outputs.secondary_pump_on is True
     assert boiler.sensors.secondary_calc_temp == 46.0
     assert boiler.settings.night_mode is NightMode.DECREASE
+
+
+async def test_isystem_auxiliary_input_decodes(mock_modbus_unit):
+    _seed(mock_modbus_unit)
+    mock_modbus_unit.holding[741] = 0
+    boiler = DiematicISystem(mock_modbus_unit)
+    await boiler.async_update()
+    assert boiler.diagnostics.auxiliary_1_input is AuxiliaryInput.DISABLED
