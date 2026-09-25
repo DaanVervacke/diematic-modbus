@@ -48,6 +48,7 @@ _ISYSTEM_BUNDLES = (
     "circuit_c",
     "settings",
     "config",
+    "outputs",
     "diagnostics",
     "identity",
 )
@@ -59,6 +60,7 @@ _BUNDLE_TITLES = {
     "circuit_c": "Heating circuit C",
     "settings": "Temperature settings",
     "config": "Installer values (cached after a successful read)",
+    "outputs": "Output states",
     "diagnostics": "Diagnostics (mostly numeric codes)",
     "identity": "Reported type and clock",
 }
